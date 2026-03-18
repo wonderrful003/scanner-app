@@ -35,11 +35,6 @@
     .preview-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.75rem; padding: 36px 20px; text-align: center; }
     .preview-placeholder svg { opacity: 0.3; }
 
-    /* Crop indicator overlay — shows which part will be read */
-    .crop-hint { position: absolute; bottom: 0; left: 0; right: 0; height: 45%; border-top: 2px dashed var(--accent); pointer-events: none; display: none; }
-    .crop-hint-label { position: absolute; top: -20px; left: 10px; font-size: 0.6rem; font-family: 'Space Mono', monospace; color: var(--accent); background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; }
-    #preview.loaded ~ .crop-hint { display: block; }
-
     .progress-wrap { height: 3px; background: var(--border); display: none; }
     .progress-bar { height: 100%; background: var(--accent2); width: 0%; transition: width 0.4s; }
 
@@ -55,7 +50,7 @@
     .btn-photo:active { transform: scale(0.97); }
     .btn-photo:disabled { opacity: 0.35; cursor: not-allowed; }
     .btn-take { background: var(--accent2); color: #fff; }
-    .btn-ocr  { background: var(--accent);  color: #0a0c10; }
+    .btn-read { background: var(--accent);  color: #0a0c10; }
 
     #fileCamera { display: none; }
 
@@ -107,9 +102,10 @@
 
   <header>
     <div class="logo">Scann<span>App</span></div>
-    <div class="pill"><div class="dot"></div><span id="engineStatus">LOADING…</span></div>
+    <div class="pill"><div class="dot"></div>VISION API</div>
   </header>
 
+  <!-- CAMERA CARD -->
   <div class="card">
     <div class="card-head">Take photo → Read Text → Save</div>
     <div class="preview-wrap">
@@ -121,18 +117,18 @@
         </svg>
         Tap TAKE PHOTO below
       </div>
-      <div class="crop-hint"><div class="crop-hint-label">TEXT READ ZONE</div></div>
     </div>
     <div class="progress-wrap" id="progressWrap"><div class="progress-bar" id="progressBar"></div></div>
-    <div class="status-bar" id="statusBar">Loading OCR engine…</div>
+    <div class="status-bar" id="statusBar">Add your API key above to get started</div>
     <div class="btn-row">
       <button class="btn-photo btn-take" id="btnTake" onclick="document.getElementById('fileCamera').click()">TAKE PHOTO</button>
-      <button class="btn-photo btn-ocr"  id="btnOcr"  onclick="runOCR()" disabled>READ TEXT</button>
+      <button class="btn-photo btn-read" id="btnRead" onclick="readText()" disabled>READ TEXT</button>
     </div>
   </div>
 
   <input type="file" id="fileCamera" accept="image/*" capture="environment" onchange="photoSelected(event)" />
 
+  <!-- RESULT -->
   <div class="result-card" id="resultCard">
     <div class="result-head">✓ Text detected — confirm &amp; save</div>
     <div class="result-text" id="resultText"></div>
@@ -143,6 +139,7 @@
     </div>
   </div>
 
+  <!-- MANUAL -->
   <div class="manual-card">
     <div class="lbl">Manual Entry</div>
     <div class="manual-row">
@@ -151,6 +148,7 @@
     </div>
   </div>
 
+  <!-- LOG -->
   <div class="log-card">
     <div class="log-head">
       <div class="log-title">Session Log</div>
@@ -162,235 +160,92 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<!-- Tesseract v4 — do NOT change this version, the API below depends on it -->
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKCsS9xLd-AFr1K4nM7mJIdwGqe4mvRqsuoWrOnKlrdYDmWyLRU6YJqtlXJey_w0R8Xw/exec";
+  // ── CONFIG ────────────────────────────────────────────────────────────────
+  const SHEETS_URL = "https://script.google.com/macros/s/AKfycbwKCsS9xLd-AFr1K4nM7mJIdwGqe4mvRqsuoWrOnKlrdYDmWyLRU6YJqtlXJey_w0R8Xw/exec";
+  const VISION_URL = "https://vision.googleapis.com/v1/images:annotate";
+  const VISION_KEY = "AIzaSyBvbY-2GpKtKJ1cDFo9o1_NkLhZ6pgHeL8";
+  // ─────────────────────────────────────────────────────────────────────────
 
-  let currentImage = null;
-  let scanCount    = 0;
-  let worker       = null;
-  let workerReady  = false;
+  let currentImageB64 = null;
+  let scanCount       = 0;
 
-  // ── Init Tesseract v4 (correct API) ───────────────────────────────────────
-  // v4 uses createWorker('lang') — NOT loadLanguage/initialize separately
-  async function initWorker() {
-    try {
-      setStatus('Loading OCR engine…', 'active');
+  // App ready on load
+  window.addEventListener('load', () => setStatus('Ready — tap Take Photo'));
 
-      worker = await Tesseract.createWorker('eng', 1, {
-        // Tesseract v4 logger
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            const pct = Math.round((m.progress || 0) * 100);
-            setProgress(pct);
-            setStatus('Reading… ' + pct + '%', 'active');
-          }
-          if (m.status === 'initialized api') {
-            // engine fully ready
-          }
-        }
-      });
+      const data = await response.json();
+      console.log('Vision API response:', JSON.stringify(data, null, 2));
 
-      // v4 setParameters API
-      await worker.setParameters({
-        // Whitelist: digits, lowercase c (your prefix), common alphanumeric
-        tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        // PSM 6 = assume uniform block of text (better than 7 for labels)
-        tessedit_pageseg_mode: '6',
-      });
-
-      workerReady = true;
-      document.getElementById('engineStatus').textContent = 'OCR READY';
-      setStatus('Ready — tap Take Photo');
-
-    } catch (err) {
-      console.error('Tesseract init failed:', err);
-      document.getElementById('engineStatus').textContent = 'OCR FAILED';
-      setStatus('OCR failed to load — use manual entry', 'bad');
-    }
-  }
-  initWorker();
-
-  // ── Photo selected ────────────────────────────────────────────────────────
-  function photoSelected(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    currentImage = file;
-
-    const url     = URL.createObjectURL(file);
-    const preview = document.getElementById('preview');
-    preview.src   = url;
-    preview.style.display = 'block';
-    preview.classList.add('loaded');
-    document.getElementById('placeholder').style.display = 'none';
-    document.getElementById('btnOcr').disabled = !workerReady;
-    setStatus('Photo ready — tap Read Text', 'ok');
-    document.getElementById('resultCard').classList.remove('show');
-    e.target.value = '';
-  }
-
-  // ── OCR ───────────────────────────────────────────────────────────────────
-  async function runOCR() {
-    if (!currentImage)  { showToast('Take a photo first', 'info');              return; }
-    if (!workerReady)   { showToast('OCR still loading — wait a moment', 'info'); return; }
-
-    const btnOcr  = document.getElementById('btnOcr');
-    const btnTake = document.getElementById('btnTake');
-    btnOcr.disabled = btnTake.disabled = true;
-    btnOcr.textContent = 'READING…';
-    showProgress(true);
-    setStatus('Preparing image…', 'active');
-
-    try {
-      // Pass 1: crop bottom 45% (text zone), greyscale only — gentle processing
-      const img1   = await cropAndProcess(currentImage, 0.55, false);
-      setStatus('Running OCR pass 1…', 'active');
-      const res1   = await worker.recognize(img1);
-      const code1  = extractCode(res1.data.text);
-      console.log('Pass 1 raw:', res1.data.text, '→ extracted:', code1);
-
-      if (code1 && code1.length >= 6) {
-        finish(code1);
-        return;
+      // Check for API errors
+      if (data.error || (data.responses && data.responses[0] && data.responses[0].error)) {
+        const err = data.error || data.responses[0].error;
+        throw new Error(err.message || 'Vision API error');
       }
 
-      // Pass 2: same crop but with binarise (high contrast)
-      setStatus('Pass 1 unclear — trying high contrast…', 'active');
-      const img2  = await cropAndProcess(currentImage, 0.55, true);
-      const res2  = await worker.recognize(img2);
-      const code2 = extractCode(res2.data.text);
-      console.log('Pass 2 raw:', res2.data.text, '→ extracted:', code2);
-
-      if (code2 && code2.length >= 6) {
-        finish(code2);
-        return;
-      }
-
-      // Pass 3: whole image, no crop — maybe label fills the frame
-      setStatus('Trying full image…', 'active');
-      const img3  = await cropAndProcess(currentImage, 0, false);
-      const res3  = await worker.recognize(img3);
-      const code3 = extractCode(res3.data.text);
-      console.log('Pass 3 raw:', res3.data.text, '→ extracted:', code3);
-
-      if (code3 && code3.length >= 4) {
-        finish(code3);
-      } else {
-        showProgress(false);
-        setStatus('Could not read text — edit manually below', 'bad');
-        showToast('Nothing found — type it manually', 'error');
-        // Show result card pre-filled empty for easy manual correction
+      const annotations = data.responses?.[0]?.textAnnotations;
+      if (!annotations || annotations.length === 0) {
+        setStatus('No text found in image', 'bad');
+        showToast('No text detected — better lighting?', 'error');
         showResult('');
+      } else {
+        // First annotation = full detected text block
+        const fullText = annotations[0].description || '';
+        console.log('Full detected text:', fullText);
+
+        // Extract the serial number from all detected text
+        const code = extractSerialNumber(fullText, annotations);
+        setStatus('✓ Found: ' + code, 'ok');
+        showResult(code);
+        if (navigator.vibrate) navigator.vibrate(100);
       }
 
     } catch (err) {
-      showProgress(false);
-      setStatus('Error — ' + err.message, 'bad');
-      console.error(err);
+      console.error('Vision API error:', err);
+      setStatus('Error: ' + err.message, 'bad');
+      showToast('Error: ' + err.message, 'error');
     }
 
-    btnOcr.disabled = btnTake.disabled = false;
-    btnOcr.textContent = 'READ TEXT';
-  }
-
-  function finish(code) {
     showProgress(false);
-    setStatus('✓ Found: ' + code, 'ok');
-    showResult(code);
-    if (navigator.vibrate) navigator.vibrate(100);
-    document.getElementById('btnOcr').disabled  = false;
-    document.getElementById('btnTake').disabled = false;
-    document.getElementById('btnOcr').textContent = 'READ TEXT';
+    btnRead.disabled = btnTake.disabled = false;
+    btnRead.textContent = 'READ TEXT';
   }
 
-  // ── Image preparation ─────────────────────────────────────────────────────
-  // cropFromTop: 0 = full image, 0.55 = skip top 55% (barcode), keep bottom 45% (text)
-  // binarise: false = greyscale only, true = black/white high contrast
-  function cropAndProcess(file, cropFromTop, binarise) {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        const sw = img.width;
-        const sh = img.height;
+  // ── Extract serial number from Vision API results ─────────────────────────
+  // Vision API returns every word as a separate annotation with coordinates.
+  // We score each word: most digits = most likely to be the serial number.
+  function extractSerialNumber(fullText, annotations) {
+    // Get all individual words (skip index 0 = full text block)
+    const words = annotations.slice(1).map(a => ({
+      text  : (a.description || '').trim(),
+      clean : (a.description || '').replace(/[^a-zA-Z0-9]/g, '').trim(),
+    })).filter(w => w.clean.length >= 3);
 
-        // Source crop
-        const sy = Math.floor(sh * cropFromTop);
-        const sh2 = sh - sy;
-
-        // Output: upscale 2× for sharper OCR, max 1600px wide
-        const scale = Math.min(2, 1600 / sw);
-        const dw = Math.floor(sw  * scale);
-        const dh = Math.floor(sh2 * scale);
-
-        const c   = document.createElement('canvas');
-        c.width   = dw;
-        c.height  = dh;
-        const ctx = c.getContext('2d');
-        ctx.drawImage(img, 0, sy, sw, sh2, 0, 0, dw, dh);
-
-        if (binarise) {
-          // Adaptive threshold: use average brightness so it works in any lighting
-          const id = ctx.getImageData(0, 0, dw, dh);
-          const px = id.data;
-          let sum = 0;
-          for (let i = 0; i < px.length; i += 4) {
-            sum += 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
-          }
-          const avg = sum / (px.length / 4);
-          const threshold = avg * 0.82; // text is darker than background
-          for (let i = 0; i < px.length; i += 4) {
-            const g = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
-            const v = g > threshold ? 255 : 0;
-            px[i] = px[i+1] = px[i+2] = v; px[i+3] = 255;
-          }
-          ctx.putImageData(id, 0, 0);
-        } else {
-          // Greyscale only — preserve shades, gentler for OCR
-          const id = ctx.getImageData(0, 0, dw, dh);
-          const px = id.data;
-          for (let i = 0; i < px.length; i += 4) {
-            const g = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
-            px[i] = px[i+1] = px[i+2] = g;
-          }
-          ctx.putImageData(id, 0, 0);
-        }
-
-        c.toBlob(b => resolve(b), 'image/png');
-      };
-      img.src = URL.createObjectURL(file);
-    });
-  }
-
-  // ── Extract serial number from raw OCR text ───────────────────────────────
-  // Your codes look like: c20250915364
-  // Strategy: find the token that is MOSTLY digits with optional letter prefix
-  function extractCode(raw) {
-    if (!raw || !raw.trim()) return '';
-
-    // Split on whitespace and newlines to get individual tokens
-    const tokens = raw.split(/[\s\n\r]+/).map(t =>
-      t.replace(/[^a-zA-Z0-9]/g, '').trim()  // strip non-alphanumeric per token
-    ).filter(t => t.length >= 4);
-
-    // Score each token: reward digit-heavy tokens, penalise all-letter tokens
+    // Score: reward digit-heavy tokens — your serials are mostly numbers
     let best = '';
     let bestScore = -1;
-    for (const t of tokens) {
-      const digits  = (t.match(/\d/g)   || []).length;
-      const letters = (t.match(/[a-zA-Z]/g) || []).length;
-      // A code like c20250915364 = 1 letter + 11 digits → score ≈ 11/(12) * 100 + 12 ≈ 103
-      // A word like "LABEL" = 0 digits → score = 0 + 5 = 5
-      const score = (digits / t.length) * 100 + t.length;
-      if (score > bestScore && digits >= 4) {
-        bestScore = score;
-        best = t;
-      }
+    for (const w of words) {
+      const digits  = (w.clean.match(/\d/g)   || []).length;
+      const total   = w.clean.length;
+      if (digits < 3) continue; // skip pure words
+      const score   = (digits / total) * 100 + total;
+      if (score > bestScore) { bestScore = score; best = w.clean; }
     }
+
+    // Fallback: scan full text for pattern like c20250915364
+    if (!best) {
+      const match = fullText.match(/[a-zA-Z]?\d{6,}/);
+      if (match) best = match[0].replace(/[^a-zA-Z0-9]/g, '');
+    }
+
+    // Last resort: return the whole cleaned text (let user edit)
+    if (!best) {
+      best = fullText.replace(/\s+/g, ' ').trim();
+    }
+
     return best;
   }
 
-  // ── Result / save ─────────────────────────────────────────────────────────
+  // ── Result ────────────────────────────────────────────────────────────────
   function showResult(code) {
     document.getElementById('resultText').textContent = code || '(nothing detected)';
     document.getElementById('editInput').value = code;
@@ -421,7 +276,7 @@
   // ── Google Sheets ─────────────────────────────────────────────────────────
   async function sendToSheet(code) {
     try {
-      await fetch(SCRIPT_URL, {
+      await fetch(SHEETS_URL, {
         method : 'POST',
         mode   : 'no-cors',
         headers: { 'Content-Type': 'application/json' },
@@ -438,10 +293,8 @@
   // ── Helpers ───────────────────────────────────────────────────────────────
   function showProgress(on) {
     document.getElementById('progressWrap').style.display = on ? 'block' : 'none';
-    if (!on) document.getElementById('progressBar').style.width = '0%';
-  }
-  function setProgress(pct) {
-    document.getElementById('progressBar').style.width = pct + '%';
+    if (!on) document.getElementById('progressBar').style.width = '100%';
+    else     document.getElementById('progressBar').style.width = '60%';
   }
   function setStatus(msg, type = '') {
     const el = document.getElementById('statusBar');
@@ -456,7 +309,7 @@
     toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
   }
   function addLog(code, ok) {
-    const list = document.getElementById('logList');
+    const list  = document.getElementById('logList');
     const empty = list.querySelector('.log-empty');
     if (empty) empty.remove();
     scanCount++;
