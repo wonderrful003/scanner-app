@@ -199,45 +199,8 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<!-- Load Tesseract from multiple CDN sources with fallback -->
-<script>
-  // First, define a fallback in case Tesseract fails to load
-  window.Tesseract = null;
-  
-  // Try multiple CDN sources
-  function loadTesseract() {
-    return new Promise((resolve, reject) => {
-      // If already loaded
-      if (window.Tesseract) {
-        resolve(window.Tesseract);
-        return;
-      }
-      
-      // Try primary CDN
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js';
-      script.onload = () => {
-        console.log('Tesseract loaded from primary CDN');
-        resolve(window.Tesseract);
-      };
-      script.onerror = () => {
-        console.log('Primary CDN failed, trying fallback...');
-        // Try fallback CDN
-        const fallbackScript = document.createElement('script');
-        fallbackScript.src = 'https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js';
-        fallbackScript.onload = () => {
-          console.log('Tesseract loaded from fallback CDN');
-          resolve(window.Tesseract);
-        };
-        fallbackScript.onerror = () => {
-          reject(new Error('Failed to load Tesseract from all CDNs'));
-        };
-        document.head.appendChild(fallbackScript);
-      };
-      document.head.appendChild(script);
-    });
-  }
-</script>
+<!-- Load Tesseract from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
 
 <script>
   // ── CONFIG ────────────────────────────────────────────────────────────────
@@ -247,23 +210,15 @@
   let currentImage = null;
   let scanCount    = 0;
   let worker       = null;
-  let tesseractAvailable = false;
 
-  // Initialize Tesseract with proper error handling
+  // Initialize Tesseract
   async function initWorker() {
-    setStatus('Loading OCR engine...', 'active');
-    
     try {
-      // First load the Tesseract library
-      const TesseractLib = await loadTesseract();
+      setStatus('Loading OCR engine...', 'active');
       
-      if (!TesseractLib) {
-        throw new Error('Tesseract library not available');
-      }
-      
-      // Create worker with simplified config
-      worker = await TesseractLib.createWorker({
+      worker = await Tesseract.createWorker({
         logger: m => {
+          console.log('OCR Progress:', m);
           if (m.status === 'recognizing text') {
             const pct = Math.round((m.progress || 0) * 100);
             setProgress(pct);
@@ -272,32 +227,27 @@
         }
       });
       
-      // Load language and initialize
       await worker.loadLanguage('eng');
       await worker.initialize('eng');
       
-      // Set parameters
+      // Set parameters for better number recognition
       await worker.setParameters({
-        tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/',
-        tessedit_pageseg_mode: '6', // SINGLE_LINE mode
+        tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-/',
+        tessedit_pageseg_mode: '7', // Treat the image as a single text line
       });
       
-      tesseractAvailable = true;
       setStatus('Ready — tap "Take Photo"');
       console.log('OCR engine loaded successfully');
       
     } catch(e) {
       console.error('Worker init error:', e);
-      setStatus('OCR engine failed — using manual entry only', 'bad');
+      setStatus('OCR engine failed - use manual entry', 'bad');
       showToast('OCR unavailable - use manual entry', 'info');
-      
-      // Disable OCR button but keep manual entry working
       document.getElementById('btnOcr').disabled = true;
-      document.getElementById('btnOcr').title = 'OCR engine failed to load';
     }
   }
 
-  // Start loading immediately
+  // Start loading
   initWorker();
 
   // ── Photo selected from camera ────────────────────────────────────────────
@@ -311,11 +261,8 @@
     preview.src = url;
     preview.style.display = 'block';
     document.getElementById('placeholder').style.display = 'none';
-    
-    // Only enable OCR if worker is available
-    document.getElementById('btnOcr').disabled = !tesseractAvailable;
-    
-    setStatus('Photo loaded — tap "Read Text"', tesseractAvailable ? 'ok' : 'bad');
+    document.getElementById('btnOcr').disabled = false;
+    setStatus('Photo loaded — tap "Read Text"', 'ok');
     document.getElementById('resultCard').classList.remove('show');
 
     // Reset file input so same file can be re-selected
@@ -325,8 +272,8 @@
   // ── Run OCR ───────────────────────────────────────────────────────────────
   async function runOCR() {
     if (!currentImage) { showToast('Take a photo first', 'info'); return; }
-    if (!worker || !tesseractAvailable) { 
-      showToast('OCR engine not available - try manual entry', 'error'); 
+    if (!worker) { 
+      showToast('OCR engine still loading, please wait…', 'info'); 
       return; 
     }
 
@@ -337,30 +284,38 @@
     btnOcr.textContent = 'READING…';
 
     showProgress(true);
-    setStatus('Starting OCR…', 'active');
+    setStatus('Processing image...', 'active');
 
     try {
-      const processed = await preprocessImage(currentImage);
-      const result    = await worker.recognize(processed);
-
-      // Extract text from result
-      let best = '';
+      // Process the image - but simpler this time
+      const processed = await prepareImageForOCR(currentImage);
       
-      if (result.data && result.data.text) {
-        best = result.data.text
-          .replace(/\s+/g, '')
-          .replace(/[^a-zA-Z0-9\-_]/g, '')
-          .trim();
-      }
+      setStatus('Running OCR...', 'active');
+      const result = await worker.recognize(processed);
 
+      console.log('Full OCR result:', result.data.text);
+      
+      // Extract the code using multiple strategies
+      let detectedCode = extractCodeFromText(result.data.text);
+      
       showProgress(false);
 
-      if (!best || best.length < 3) {
-        setStatus('Nothing readable — try closer with good lighting', 'bad');
-        showToast('Could not read text — try again', 'error');
+      if (!detectedCode || detectedCode.length < 4) {
+        // Try one more time with different preprocessing
+        setStatus('First attempt failed, trying alternative method...', 'active');
+        
+        const processed2 = await prepareImageAlt(currentImage);
+        const result2 = await worker.recognize(processed2);
+        
+        detectedCode = extractCodeFromText(result2.data.text);
+      }
+
+      if (!detectedCode || detectedCode.length < 4) {
+        setStatus('Could not read text - try manual entry', 'bad');
+        showToast('No readable text found', 'error');
       } else {
-        setStatus('✓ Found: ' + best, 'ok');
-        showResult(best);
+        setStatus('✓ Found: ' + detectedCode, 'ok');
+        showResult(detectedCode);
         if (navigator.vibrate) navigator.vibrate(100);
       }
 
@@ -371,39 +326,131 @@
       showToast('OCR failed: ' + err.message, 'error');
     }
 
-    btnOcr.disabled  = !tesseractAvailable;
+    btnOcr.disabled  = false;
     btnTake.disabled = false;
     btnOcr.textContent = 'READ TEXT';
   }
 
-  // ── Pre-process image ───────────────────────────────────
-  function preprocessImage(file) {
+  // Extract code from text using patterns
+  function extractCodeFromText(text) {
+    if (!text) return '';
+    
+    console.log('Raw OCR text:', text);
+    
+    // Strategy 1: Look for patterns like c20250915364 (letter followed by numbers)
+    const pattern1 = text.match(/[a-zA-Z]?\d{8,15}[a-zA-Z]?/);
+    if (pattern1) {
+      return pattern1[0];
+    }
+    
+    // Strategy 2: Look for any alphanumeric string with at least 8 characters
+    const pattern2 = text.match(/[a-zA-Z0-9\-_]{8,20}/);
+    if (pattern2) {
+      return pattern2[0];
+    }
+    
+    // Strategy 3: Clean the entire text
+    let cleaned = text
+      .replace(/\s+/g, '')           // Remove all spaces
+      .replace(/[^a-zA-Z0-9\-_]/g, '') // Remove special chars except - and _
+      .trim();
+    
+    // If cleaned text is long enough, return it
+    if (cleaned.length >= 4) {
+      return cleaned;
+    }
+    
+    return '';
+  }
+
+  // First image preparation method
+  function prepareImageForOCR(file) {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const srcW = img.width;
-        const srcH = img.height;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Target size: around 1000px wide
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > 1000) {
+          height = Math.round((1000 / width) * height);
+          width = 1000;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw image
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to grayscale slightly to help OCR
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+          data[i] = gray;     // R
+          data[i+1] = gray;   // G
+          data[i+2] = gray;   // B
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        
+        canvas.toBlob(blob => resolve(blob), 'image/png');
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  }
 
-        // Crop: skip top 55%, keep bottom 45%
-        const cropY = Math.floor(srcH * 0.55);
-        const cropH = srcH - cropY;
-
-        // Output at 2× scale for sharper OCR
-        const maxW  = 1600;
-        const scale = Math.min(2, maxW / srcW);
-        const outW  = Math.floor(srcW  * scale);
-        const outH  = Math.floor(cropH * scale);
-
-        const c   = document.createElement('canvas');
-        c.width   = outW;
-        c.height  = outH;
-        const ctx = c.getContext('2d');
-
-        // Draw only the cropped bottom portion
-        ctx.drawImage(img, 0, cropY, srcW, cropH, 0, 0, outW, outH);
-
-        // Convert to blob
-        c.toBlob(blob => resolve(blob), 'image/png');
+  // Alternative preparation - higher contrast
+  function prepareImageAlt(file) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Target size
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > 1200) {
+          height = Math.round((1200 / width) * height);
+          width = 1200;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw image
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Increase contrast
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+          // Convert to grayscale
+          let gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+          
+          // Increase contrast
+          if (gray > 128) {
+            gray = 255;
+          } else {
+            gray = 0;
+          }
+          
+          data[i] = gray;
+          data[i+1] = gray;
+          data[i+2] = gray;
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        
+        canvas.toBlob(blob => resolve(blob), 'image/png');
       };
       img.src = URL.createObjectURL(file);
     });
@@ -453,17 +500,15 @@
     showToast('Sending...', 'info');
     
     try {
-      // Use fetch with proper CORS mode
-      const response = await fetch(SCRIPT_URL, {
+      await fetch(SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors', // Keep no-cors for Google Apps Script
+        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ code: code })
       });
       
-      // With no-cors, we can't read response, so assume success
       addLog(code, true);
       showToast('✓ Saved: ' + code, 'success');
       
@@ -511,6 +556,9 @@
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+
+  // Debug: Log when image is selected
+  console.log('App initialized');
 </script>
 </body>
 </html>
