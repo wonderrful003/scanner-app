@@ -20,7 +20,6 @@
     }
     .app { position: relative; z-index: 1; max-width: 420px; margin: 0 auto; min-height: 100vh; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 20px; }
 
-    /* HEADER */
     header { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
     .logo { font-family: 'Space Mono', monospace; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); text-transform: uppercase; }
     .logo span { color: var(--text); }
@@ -28,31 +27,22 @@
     .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-    /* PHOTO CARD */
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
     .card-head { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 0.72rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
 
-    /* Preview area */
-    .preview-wrap {
-      width: 100%; background: #000; min-height: 200px;
-      display: flex; align-items: center; justify-content: center;
-      position: relative; overflow: hidden;
-    }
-    #preview {
-      width: 100%; max-height: 280px; object-fit: contain; display: none;
-    }
-    .preview-placeholder {
-      display: flex; flex-direction: column; align-items: center; gap: 10px;
-      color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.75rem;
-      padding: 40px 20px; text-align: center;
-    }
+    .preview-wrap { width: 100%; background: #000; min-height: 180px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+    #preview { width: 100%; max-height: 260px; object-fit: contain; display: none; }
+    .preview-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.75rem; padding: 36px 20px; text-align: center; }
     .preview-placeholder svg { opacity: 0.3; }
 
-    /* Progress bar */
-    .progress-wrap { height: 3px; background: var(--border); display: none; }
-    .progress-bar { height: 100%; background: var(--accent2); width: 0%; transition: width 0.3s; }
+    /* Crop indicator overlay — shows which part will be read */
+    .crop-hint { position: absolute; bottom: 0; left: 0; right: 0; height: 45%; border-top: 2px dashed var(--accent); pointer-events: none; display: none; }
+    .crop-hint-label { position: absolute; top: -20px; left: 10px; font-size: 0.6rem; font-family: 'Space Mono', monospace; color: var(--accent); background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; }
+    #preview.loaded ~ .crop-hint { display: block; }
 
-    /* Status */
+    .progress-wrap { height: 3px; background: var(--border); display: none; }
+    .progress-bar { height: 100%; background: var(--accent2); width: 0%; transition: width 0.4s; }
+
     .status-bar { padding: 12px 18px; font-size: 0.75rem; font-family: 'Space Mono', monospace; color: var(--muted); display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--border); min-height: 44px; }
     .status-bar.active { color: var(--accent2); }
     .status-bar.ok     { color: var(--accent); }
@@ -60,27 +50,20 @@
     .spinner { width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
     @keyframes spin { to{transform:rotate(360deg)} }
 
-    /* Buttons */
     .btn-row { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
-    .btn-photo {
-      flex: 1; padding: 13px; border: none; border-radius: 10px;
-      font-family: 'Space Mono', monospace; font-size: 0.82rem; font-weight: 700;
-      letter-spacing: 0.05em; cursor: pointer; transition: opacity 0.2s, transform 0.1s;
-    }
+    .btn-photo { flex: 1; padding: 13px; border: none; border-radius: 10px; font-family: 'Space Mono', monospace; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.05em; cursor: pointer; transition: opacity 0.2s, transform 0.1s; }
     .btn-photo:active { transform: scale(0.97); }
     .btn-photo:disabled { opacity: 0.35; cursor: not-allowed; }
-    .btn-take  { background: var(--accent2); color: #fff; }
-    .btn-ocr   { background: var(--accent);  color: #0a0c10; }
+    .btn-take { background: var(--accent2); color: #fff; }
+    .btn-ocr  { background: var(--accent);  color: #0a0c10; }
 
-    /* Hidden file inputs */
     #fileCamera { display: none; }
 
-    /* RESULT */
-    .result-card { background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius); overflow: hidden; display: none; animation: slideIn 0.3s ease; }
-    .result-card.show { display: block; }
-    @keyframes slideIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:none} }
+    .result-card { background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius); overflow: hidden; display: none; }
+    .result-card.show { display: block; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
     .result-head { padding: 12px 18px; background: rgba(0,229,160,0.07); border-bottom: 1px solid var(--border); font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; }
-    .result-text { padding: 16px 18px 6px; font-family: 'Space Mono', monospace; font-size: 1.5rem; font-weight: 700; color: var(--accent); word-break: break-all; line-height: 1.3; }
+    .result-text { padding: 16px 18px 4px; font-family: 'Space Mono', monospace; font-size: 1.5rem; font-weight: 700; color: var(--accent); word-break: break-all; line-height: 1.3; }
     .result-sub  { padding: 4px 18px 14px; font-size: 0.72rem; color: var(--muted); font-family: 'Space Mono', monospace; }
     .edit-row { padding: 0 18px 16px; display: flex; gap: 10px; }
     .edit-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.9rem; padding: 11px 14px; outline: none; transition: border-color 0.2s; }
@@ -88,17 +71,14 @@
     .save-btn { background: var(--accent); color: #0a0c10; border: none; border-radius: 10px; padding: 11px 22px; font-family: 'Space Mono', monospace; font-size: 0.82rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
     .save-btn:hover { opacity: 0.85; }
 
-    /* MANUAL */
     .manual-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
-    .label { font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+    .lbl { font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
     .manual-row { display: flex; gap: 10px; }
     .manual-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.85rem; padding: 11px 14px; outline: none; transition: border-color 0.2s; }
     .manual-row input:focus { border-color: var(--accent2); }
     .manual-row input::placeholder { color: var(--muted); }
     .send-btn { background: var(--accent2); color: #fff; border: none; border-radius: 10px; padding: 11px 18px; font-family: 'Space Mono', monospace; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
-    .send-btn:hover { opacity: 0.85; }
 
-    /* LOG */
     .log-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
     .log-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
     .log-title { font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
@@ -115,7 +95,6 @@
     .log-list::-webkit-scrollbar { width: 4px; }
     .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-    /* TOAST */
     .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-90px); z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 10px 22px; font-size: 0.82rem; font-family: 'Space Mono', monospace; white-space: nowrap; transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); max-width: 90vw; text-align: center; }
     .toast.show    { transform: translateX(-50%) translateY(0); }
     .toast.success { border-color: var(--accent); color: var(--accent); }
@@ -128,13 +107,11 @@
 
   <header>
     <div class="logo">Scann<span>App</span></div>
-    <div class="pill"><div class="dot"></div>OCR MODE</div>
+    <div class="pill"><div class="dot"></div><span id="engineStatus">LOADING…</span></div>
   </header>
 
-  <!-- Photo card -->
   <div class="card">
-    <div class="card-head">Step 1 — Take a photo of the label</div>
-
+    <div class="card-head">Take photo → Read Text → Save</div>
     <div class="preview-wrap">
       <img id="preview" alt="preview" />
       <div class="preview-placeholder" id="placeholder">
@@ -144,335 +121,282 @@
         </svg>
         Tap TAKE PHOTO below
       </div>
+      <div class="crop-hint"><div class="crop-hint-label">TEXT READ ZONE</div></div>
     </div>
-
-    <div class="progress-wrap" id="progressWrap">
-      <div class="progress-bar" id="progressBar"></div>
-    </div>
-
-    <div class="status-bar" id="statusBar">Tap "Take Photo" to open your camera</div>
-
+    <div class="progress-wrap" id="progressWrap"><div class="progress-bar" id="progressBar"></div></div>
+    <div class="status-bar" id="statusBar">Loading OCR engine…</div>
     <div class="btn-row">
-      <button class="btn-photo btn-take" id="btnTake" onclick="document.getElementById('fileCamera').click()">
-        TAKE PHOTO
-      </button>
-      <button class="btn-photo btn-ocr" id="btnOcr" onclick="runOCR()" disabled>
-        READ TEXT
-      </button>
+      <button class="btn-photo btn-take" id="btnTake" onclick="document.getElementById('fileCamera').click()">TAKE PHOTO</button>
+      <button class="btn-photo btn-ocr"  id="btnOcr"  onclick="runOCR()" disabled>READ TEXT</button>
     </div>
   </div>
 
-  <!-- Hidden camera input — opens native camera on mobile -->
   <input type="file" id="fileCamera" accept="image/*" capture="environment" onchange="photoSelected(event)" />
 
-  <!-- Result -->
   <div class="result-card" id="resultCard">
     <div class="result-head">✓ Text detected — confirm &amp; save</div>
     <div class="result-text" id="resultText"></div>
-    <div class="result-sub">Edit if any character looks wrong</div>
+    <div class="result-sub">Edit if any character looks wrong, then tap SAVE</div>
     <div class="edit-row">
       <input class="edit-input" id="editInput" type="text" />
       <button class="save-btn" onclick="saveCode()">SAVE</button>
     </div>
   </div>
 
-  <!-- Manual entry -->
   <div class="manual-card">
-    <div class="label">Manual Entry</div>
+    <div class="lbl">Manual Entry</div>
     <div class="manual-row">
       <input type="text" id="manualInput" placeholder="Type code manually…" />
       <button class="send-btn" onclick="submitManual()">SEND</button>
     </div>
   </div>
 
-  <!-- Log -->
   <div class="log-card">
     <div class="log-head">
       <div class="log-title">Session Log</div>
       <div class="log-count" id="logCount">0 scans</div>
     </div>
-    <div class="log-list" id="logList">
-      <div class="log-empty">No scans yet</div>
-    </div>
+    <div class="log-list" id="logList"><div class="log-empty">No scans yet</div></div>
   </div>
 
 </div>
 <div class="toast" id="toast"></div>
 
-<!-- Load Tesseract from CDN -->
+<!-- Tesseract v4 — do NOT change this version, the API below depends on it -->
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
-
 <script>
-  // ── CONFIG ────────────────────────────────────────────────────────────────
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKCsS9xLd-AFr1K4nM7mJIdwGqe4mvRqsuoWrOnKlrdYDmWyLRU6YJqtlXJey_w0R8Xw/exec";
-  // ─────────────────────────────────────────────────────────────────────────
 
   let currentImage = null;
   let scanCount    = 0;
   let worker       = null;
+  let workerReady  = false;
 
-  // Initialize Tesseract
+  // ── Init Tesseract v4 (correct API) ───────────────────────────────────────
+  // v4 uses createWorker('lang') — NOT loadLanguage/initialize separately
   async function initWorker() {
     try {
-      setStatus('Loading OCR engine...', 'active');
-      
-      worker = await Tesseract.createWorker({
+      setStatus('Loading OCR engine…', 'active');
+
+      worker = await Tesseract.createWorker('eng', 1, {
+        // Tesseract v4 logger
         logger: m => {
-          console.log('OCR Progress:', m);
           if (m.status === 'recognizing text') {
             const pct = Math.round((m.progress || 0) * 100);
             setProgress(pct);
-            setStatus(`Reading text… ${pct}%`, 'active');
+            setStatus('Reading… ' + pct + '%', 'active');
+          }
+          if (m.status === 'initialized api') {
+            // engine fully ready
           }
         }
       });
-      
-      await worker.loadLanguage('eng');
-      await worker.initialize('eng');
-      
-      // Set parameters for better number recognition
+
+      // v4 setParameters API
       await worker.setParameters({
-        tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-/',
-        tessedit_pageseg_mode: '7', // Treat the image as a single text line
+        // Whitelist: digits, lowercase c (your prefix), common alphanumeric
+        tessedit_char_whitelist: '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        // PSM 6 = assume uniform block of text (better than 7 for labels)
+        tessedit_pageseg_mode: '6',
       });
-      
-      setStatus('Ready — tap "Take Photo"');
-      console.log('OCR engine loaded successfully');
-      
-    } catch(e) {
-      console.error('Worker init error:', e);
-      setStatus('OCR engine failed - use manual entry', 'bad');
-      showToast('OCR unavailable - use manual entry', 'info');
-      document.getElementById('btnOcr').disabled = true;
+
+      workerReady = true;
+      document.getElementById('engineStatus').textContent = 'OCR READY';
+      setStatus('Ready — tap Take Photo');
+
+    } catch (err) {
+      console.error('Tesseract init failed:', err);
+      document.getElementById('engineStatus').textContent = 'OCR FAILED';
+      setStatus('OCR failed to load — use manual entry', 'bad');
     }
   }
-
-  // Start loading
   initWorker();
 
-  // ── Photo selected from camera ────────────────────────────────────────────
-  function photoSelected(event) {
-    const file = event.target.files[0];
+  // ── Photo selected ────────────────────────────────────────────────────────
+  function photoSelected(e) {
+    const file = e.target.files[0];
     if (!file) return;
-
     currentImage = file;
-    const url = URL.createObjectURL(file);
-    const preview = document.getElementById('preview');
-    preview.src = url;
-    preview.style.display = 'block';
-    document.getElementById('placeholder').style.display = 'none';
-    document.getElementById('btnOcr').disabled = false;
-    setStatus('Photo loaded — tap "Read Text"', 'ok');
-    document.getElementById('resultCard').classList.remove('show');
 
-    // Reset file input so same file can be re-selected
-    event.target.value = '';
+    const url     = URL.createObjectURL(file);
+    const preview = document.getElementById('preview');
+    preview.src   = url;
+    preview.style.display = 'block';
+    preview.classList.add('loaded');
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('btnOcr').disabled = !workerReady;
+    setStatus('Photo ready — tap Read Text', 'ok');
+    document.getElementById('resultCard').classList.remove('show');
+    e.target.value = '';
   }
 
-  // ── Run OCR ───────────────────────────────────────────────────────────────
+  // ── OCR ───────────────────────────────────────────────────────────────────
   async function runOCR() {
-    if (!currentImage) { showToast('Take a photo first', 'info'); return; }
-    if (!worker) { 
-      showToast('OCR engine still loading, please wait…', 'info'); 
-      return; 
-    }
+    if (!currentImage)  { showToast('Take a photo first', 'info');              return; }
+    if (!workerReady)   { showToast('OCR still loading — wait a moment', 'info'); return; }
 
     const btnOcr  = document.getElementById('btnOcr');
     const btnTake = document.getElementById('btnTake');
-    btnOcr.disabled  = true;
-    btnTake.disabled = true;
+    btnOcr.disabled = btnTake.disabled = true;
     btnOcr.textContent = 'READING…';
-
     showProgress(true);
-    setStatus('Processing image...', 'active');
+    setStatus('Preparing image…', 'active');
 
     try {
-      // Process the image - but simpler this time
-      const processed = await prepareImageForOCR(currentImage);
-      
-      setStatus('Running OCR...', 'active');
-      const result = await worker.recognize(processed);
+      // Pass 1: crop bottom 45% (text zone), greyscale only — gentle processing
+      const img1   = await cropAndProcess(currentImage, 0.55, false);
+      setStatus('Running OCR pass 1…', 'active');
+      const res1   = await worker.recognize(img1);
+      const code1  = extractCode(res1.data.text);
+      console.log('Pass 1 raw:', res1.data.text, '→ extracted:', code1);
 
-      console.log('Full OCR result:', result.data.text);
-      
-      // Extract the code using multiple strategies
-      let detectedCode = extractCodeFromText(result.data.text);
-      
-      showProgress(false);
-
-      if (!detectedCode || detectedCode.length < 4) {
-        // Try one more time with different preprocessing
-        setStatus('First attempt failed, trying alternative method...', 'active');
-        
-        const processed2 = await prepareImageAlt(currentImage);
-        const result2 = await worker.recognize(processed2);
-        
-        detectedCode = extractCodeFromText(result2.data.text);
+      if (code1 && code1.length >= 6) {
+        finish(code1);
+        return;
       }
 
-      if (!detectedCode || detectedCode.length < 4) {
-        setStatus('Could not read text - try manual entry', 'bad');
-        showToast('No readable text found', 'error');
+      // Pass 2: same crop but with binarise (high contrast)
+      setStatus('Pass 1 unclear — trying high contrast…', 'active');
+      const img2  = await cropAndProcess(currentImage, 0.55, true);
+      const res2  = await worker.recognize(img2);
+      const code2 = extractCode(res2.data.text);
+      console.log('Pass 2 raw:', res2.data.text, '→ extracted:', code2);
+
+      if (code2 && code2.length >= 6) {
+        finish(code2);
+        return;
+      }
+
+      // Pass 3: whole image, no crop — maybe label fills the frame
+      setStatus('Trying full image…', 'active');
+      const img3  = await cropAndProcess(currentImage, 0, false);
+      const res3  = await worker.recognize(img3);
+      const code3 = extractCode(res3.data.text);
+      console.log('Pass 3 raw:', res3.data.text, '→ extracted:', code3);
+
+      if (code3 && code3.length >= 4) {
+        finish(code3);
       } else {
-        setStatus('✓ Found: ' + detectedCode, 'ok');
-        showResult(detectedCode);
-        if (navigator.vibrate) navigator.vibrate(100);
+        showProgress(false);
+        setStatus('Could not read text — edit manually below', 'bad');
+        showToast('Nothing found — type it manually', 'error');
+        // Show result card pre-filled empty for easy manual correction
+        showResult('');
       }
 
     } catch (err) {
       showProgress(false);
-      setStatus('Error: ' + err.message, 'bad');
-      console.error('OCR error:', err);
-      showToast('OCR failed: ' + err.message, 'error');
+      setStatus('Error — ' + err.message, 'bad');
+      console.error(err);
     }
 
-    btnOcr.disabled  = false;
-    btnTake.disabled = false;
+    btnOcr.disabled = btnTake.disabled = false;
     btnOcr.textContent = 'READ TEXT';
   }
 
-  // Extract code from text using patterns
-  function extractCodeFromText(text) {
-    if (!text) return '';
-    
-    console.log('Raw OCR text:', text);
-    
-    // Strategy 1: Look for patterns like c20250915364 (letter followed by numbers)
-    const pattern1 = text.match(/[a-zA-Z]?\d{8,15}[a-zA-Z]?/);
-    if (pattern1) {
-      return pattern1[0];
-    }
-    
-    // Strategy 2: Look for any alphanumeric string with at least 8 characters
-    const pattern2 = text.match(/[a-zA-Z0-9\-_]{8,20}/);
-    if (pattern2) {
-      return pattern2[0];
-    }
-    
-    // Strategy 3: Clean the entire text
-    let cleaned = text
-      .replace(/\s+/g, '')           // Remove all spaces
-      .replace(/[^a-zA-Z0-9\-_]/g, '') // Remove special chars except - and _
-      .trim();
-    
-    // If cleaned text is long enough, return it
-    if (cleaned.length >= 4) {
-      return cleaned;
-    }
-    
-    return '';
+  function finish(code) {
+    showProgress(false);
+    setStatus('✓ Found: ' + code, 'ok');
+    showResult(code);
+    if (navigator.vibrate) navigator.vibrate(100);
+    document.getElementById('btnOcr').disabled  = false;
+    document.getElementById('btnTake').disabled = false;
+    document.getElementById('btnOcr').textContent = 'READ TEXT';
   }
 
-  // First image preparation method
-  function prepareImageForOCR(file) {
-    return new Promise((resolve) => {
+  // ── Image preparation ─────────────────────────────────────────────────────
+  // cropFromTop: 0 = full image, 0.55 = skip top 55% (barcode), keep bottom 45% (text)
+  // binarise: false = greyscale only, true = black/white high contrast
+  function cropAndProcess(file, cropFromTop, binarise) {
+    return new Promise(resolve => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Target size: around 1000px wide
-        let width = img.width;
-        let height = img.height;
-        
-        if (width > 1000) {
-          height = Math.round((1000 / width) * height);
-          width = 1000;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Draw image
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // Convert to grayscale slightly to help OCR
-        const imageData = ctx.getImageData(0, 0, width, height);
-        const data = imageData.data;
-        
-        for (let i = 0; i < data.length; i += 4) {
-          const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-          data[i] = gray;     // R
-          data[i+1] = gray;   // G
-          data[i+2] = gray;   // B
-        }
-        
-        ctx.putImageData(imageData, 0, 0);
-        
-        canvas.toBlob(blob => resolve(blob), 'image/png');
-      };
-      img.src = URL.createObjectURL(file);
-    });
-  }
+        const sw = img.width;
+        const sh = img.height;
 
-  // Alternative preparation - higher contrast
-  function prepareImageAlt(file) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Target size
-        let width = img.width;
-        let height = img.height;
-        
-        if (width > 1200) {
-          height = Math.round((1200 / width) * height);
-          width = 1200;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Draw image
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // Increase contrast
-        const imageData = ctx.getImageData(0, 0, width, height);
-        const data = imageData.data;
-        
-        for (let i = 0; i < data.length; i += 4) {
-          // Convert to grayscale
-          let gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
-          
-          // Increase contrast
-          if (gray > 128) {
-            gray = 255;
-          } else {
-            gray = 0;
+        // Source crop
+        const sy = Math.floor(sh * cropFromTop);
+        const sh2 = sh - sy;
+
+        // Output: upscale 2× for sharper OCR, max 1600px wide
+        const scale = Math.min(2, 1600 / sw);
+        const dw = Math.floor(sw  * scale);
+        const dh = Math.floor(sh2 * scale);
+
+        const c   = document.createElement('canvas');
+        c.width   = dw;
+        c.height  = dh;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, sy, sw, sh2, 0, 0, dw, dh);
+
+        if (binarise) {
+          // Adaptive threshold: use average brightness so it works in any lighting
+          const id = ctx.getImageData(0, 0, dw, dh);
+          const px = id.data;
+          let sum = 0;
+          for (let i = 0; i < px.length; i += 4) {
+            sum += 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
           }
-          
-          data[i] = gray;
-          data[i+1] = gray;
-          data[i+2] = gray;
+          const avg = sum / (px.length / 4);
+          const threshold = avg * 0.82; // text is darker than background
+          for (let i = 0; i < px.length; i += 4) {
+            const g = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
+            const v = g > threshold ? 255 : 0;
+            px[i] = px[i+1] = px[i+2] = v; px[i+3] = 255;
+          }
+          ctx.putImageData(id, 0, 0);
+        } else {
+          // Greyscale only — preserve shades, gentler for OCR
+          const id = ctx.getImageData(0, 0, dw, dh);
+          const px = id.data;
+          for (let i = 0; i < px.length; i += 4) {
+            const g = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
+            px[i] = px[i+1] = px[i+2] = g;
+          }
+          ctx.putImageData(id, 0, 0);
         }
-        
-        ctx.putImageData(imageData, 0, 0);
-        
-        canvas.toBlob(blob => resolve(blob), 'image/png');
+
+        c.toBlob(b => resolve(b), 'image/png');
       };
       img.src = URL.createObjectURL(file);
     });
   }
 
-  // ── Show / hide progress bar ──────────────────────────────────────────────
-  function showProgress(show) {
-    document.getElementById('progressWrap').style.display = show ? 'block' : 'none';
-    if (!show) document.getElementById('progressBar').style.width = '0%';
-  }
-  
-  function setProgress(pct) {
-    document.getElementById('progressBar').style.width = pct + '%';
+  // ── Extract serial number from raw OCR text ───────────────────────────────
+  // Your codes look like: c20250915364
+  // Strategy: find the token that is MOSTLY digits with optional letter prefix
+  function extractCode(raw) {
+    if (!raw || !raw.trim()) return '';
+
+    // Split on whitespace and newlines to get individual tokens
+    const tokens = raw.split(/[\s\n\r]+/).map(t =>
+      t.replace(/[^a-zA-Z0-9]/g, '').trim()  // strip non-alphanumeric per token
+    ).filter(t => t.length >= 4);
+
+    // Score each token: reward digit-heavy tokens, penalise all-letter tokens
+    let best = '';
+    let bestScore = -1;
+    for (const t of tokens) {
+      const digits  = (t.match(/\d/g)   || []).length;
+      const letters = (t.match(/[a-zA-Z]/g) || []).length;
+      // A code like c20250915364 = 1 letter + 11 digits → score ≈ 11/(12) * 100 + 12 ≈ 103
+      // A word like "LABEL" = 0 digits → score = 0 + 5 = 5
+      const score = (digits / t.length) * 100 + t.length;
+      if (score > bestScore && digits >= 4) {
+        bestScore = score;
+        best = t;
+      }
+    }
+    return best;
   }
 
-  // ── Show result ───────────────────────────────────────────────────────────
+  // ── Result / save ─────────────────────────────────────────────────────────
   function showResult(code) {
-    document.getElementById('resultText').textContent = code;
+    document.getElementById('resultText').textContent = code || '(nothing detected)';
     document.getElementById('editInput').value = code;
     const card = document.getElementById('resultCard');
     card.classList.add('show');
-    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 120);
   }
 
   function saveCode() {
@@ -490,75 +414,65 @@
     sendToSheet(val);
     inp.value = '';
   }
-  
   document.getElementById('manualInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') submitManual();
   });
 
-  // ── Send to Google Sheets ─────────────────────────────────────────────────
+  // ── Google Sheets ─────────────────────────────────────────────────────────
   async function sendToSheet(code) {
-    showToast('Sending...', 'info');
-    
     try {
       await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code: code })
+        method : 'POST',
+        mode   : 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ code }),
       });
-      
       addLog(code, true);
       showToast('✓ Saved: ' + code, 'success');
-      
     } catch (err) {
-      console.error('Send error:', err);
       addLog(code, false);
-      showToast('✗ Failed to save: ' + err.message, 'error');
+      showToast('✗ Network error', 'error');
     }
   }
 
-  // ── UI Helpers ────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function showProgress(on) {
+    document.getElementById('progressWrap').style.display = on ? 'block' : 'none';
+    if (!on) document.getElementById('progressBar').style.width = '0%';
+  }
+  function setProgress(pct) {
+    document.getElementById('progressBar').style.width = pct + '%';
+  }
   function setStatus(msg, type = '') {
     const el = document.getElementById('statusBar');
     el.className = 'status-bar ' + type;
-    el.innerHTML = type === 'active'
-      ? `<div class="spinner"></div>${msg}`
-      : msg;
+    el.innerHTML = type === 'active' ? `<div class="spinner"></div>${msg}` : msg;
   }
-
   let toastTimer;
   function showToast(msg, type = 'info') {
     const t = document.getElementById('toast');
-    t.textContent  = msg;
-    t.className    = `toast ${type} show`;
+    t.textContent = msg; t.className = `toast ${type} show`;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
   }
-
   function addLog(code, ok) {
-    const list  = document.getElementById('logList');
+    const list = document.getElementById('logList');
     const empty = list.querySelector('.log-empty');
     if (empty) empty.remove();
     scanCount++;
     document.getElementById('logCount').textContent = `${scanCount} scan${scanCount !== 1 ? 's' : ''}`;
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const ts = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
     const item = document.createElement('div');
     item.className = 'log-item';
     item.innerHTML = `
-      <div class="log-icon ${ok ? 'ok' : 'err'}">${ok ? '✓' : '✗'}</div>
+      <div class="log-icon ${ok?'ok':'err'}">${ok?'✓':'✗'}</div>
       <div class="log-code">${escHtml(code)}</div>
-      <div class="log-time">${timeStr}</div>`;
+      <div class="log-time">${ts}</div>`;
     list.prepend(item);
   }
-
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
-
-  // Debug: Log when image is selected
-  console.log('App initialized');
 </script>
 </body>
 </html>
