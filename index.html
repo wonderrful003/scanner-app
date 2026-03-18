@@ -20,83 +20,94 @@
     }
     .app { position: relative; z-index: 1; max-width: 420px; margin: 0 auto; min-height: 100vh; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 20px; }
 
+    /* HEADER */
     header { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
     .logo { font-family: 'Space Mono', monospace; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); text-transform: uppercase; }
     .logo span { color: var(--text); }
-    .status-pill { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 5px 12px; }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 2s infinite; }
+    .pill { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 5px 12px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-    .camera-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-    .card-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; font-size: 0.75rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    /* PHOTO CARD */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .card-head { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 0.72rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
 
-    .video-wrap { position: relative; background: #000; width: 100%; aspect-ratio: 16/9; }
-    #video { width: 100%; height: 100%; object-fit: cover; display: block; }
-    #canvas { display: none; }
+    /* Preview area */
+    .preview-wrap {
+      width: 100%; background: #000; min-height: 200px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    #preview {
+      width: 100%; max-height: 280px; object-fit: contain; display: none;
+    }
+    .preview-placeholder {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.75rem;
+      padding: 40px 20px; text-align: center;
+    }
+    .preview-placeholder svg { opacity: 0.3; }
 
-    .aim-guide {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 86%; height: 36%; pointer-events: none;
-    }
-    .aim-guide::before, .aim-guide::after,
-    .aim-guide span::before, .aim-guide span::after {
-      content: ''; position: absolute; width: 24px; height: 24px;
-      border-color: var(--accent); border-style: solid;
-    }
-    .aim-guide::before  { top:0; left:0;   border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
-    .aim-guide::after   { top:0; right:0;  border-width:3px 3px 0 0; border-radius:0 4px 0 0; }
-    .aim-guide span::before { bottom:0; left:0;  border-width:0 0 3px 3px; border-radius:0 0 0 4px; }
-    .aim-guide span::after  { bottom:0; right:0; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
-    .scan-line {
-      position: absolute; left: 5%; right: 5%; height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
-      animation: scanline 2s ease-in-out infinite;
-    }
-    @keyframes scanline { 0%{top:5%;opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{top:95%;opacity:0} }
+    /* Progress bar */
+    .progress-wrap { height: 3px; background: var(--border); display: none; }
+    .progress-bar { height: 100%; background: var(--accent2); width: 0%; transition: width 0.3s; }
 
-    .scan-status { padding: 12px 18px; font-size: 0.75rem; font-family: 'Space Mono', monospace; color: var(--muted); display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--border); min-height: 46px; }
-    .scan-status.active { color: var(--accent2); }
-    .scan-status.found  { color: var(--accent); }
-    .scan-status.error  { color: var(--warn); }
-    .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    /* Status */
+    .status-bar { padding: 12px 18px; font-size: 0.75rem; font-family: 'Space Mono', monospace; color: var(--muted); display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--border); min-height: 44px; }
+    .status-bar.active { color: var(--accent2); }
+    .status-bar.ok     { color: var(--accent); }
+    .status-bar.bad    { color: var(--warn); }
+    .spinner { width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
     @keyframes spin { to{transform:rotate(360deg)} }
 
-    .capture-wrap { padding: 14px 18px; border-top: 1px solid var(--border); }
-    .capture-btn { width: 100%; padding: 14px; background: var(--accent2); color: #fff; border: none; border-radius: 10px; font-family: 'Space Mono', monospace; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; transition: opacity 0.2s, transform 0.1s; }
-    .capture-btn:hover  { opacity: 0.85; }
-    .capture-btn:active { transform: scale(0.98); }
-    .capture-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* Buttons */
+    .btn-row { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+    .btn-photo {
+      flex: 1; padding: 13px; border: none; border-radius: 10px;
+      font-family: 'Space Mono', monospace; font-size: 0.82rem; font-weight: 700;
+      letter-spacing: 0.05em; cursor: pointer; transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-photo:active { transform: scale(0.97); }
+    .btn-photo:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-take  { background: var(--accent2); color: #fff; }
+    .btn-ocr   { background: var(--accent);  color: #0a0c10; }
 
-    .result-card { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); overflow: hidden; display: none; }
-    .result-card.show { display: block; animation: fadeIn 0.3s ease; }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
-    .result-header { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; }
-    .result-code { padding: 18px 18px 8px; font-family: 'Space Mono', monospace; font-size: 1.4rem; font-weight: 700; color: var(--accent); word-break: break-all; }
-    .result-hint { padding: 0 18px 14px; font-size: 0.75rem; color: var(--muted); font-family: 'Space Mono', monospace; }
-    .edit-row { padding: 0 18px 18px; display: flex; gap: 10px; }
+    /* Hidden file inputs */
+    #fileCamera { display: none; }
+
+    /* RESULT */
+    .result-card { background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius); overflow: hidden; display: none; animation: slideIn 0.3s ease; }
+    .result-card.show { display: block; }
+    @keyframes slideIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:none} }
+    .result-head { padding: 12px 18px; background: rgba(0,229,160,0.07); border-bottom: 1px solid var(--border); font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; }
+    .result-text { padding: 16px 18px 6px; font-family: 'Space Mono', monospace; font-size: 1.5rem; font-weight: 700; color: var(--accent); word-break: break-all; line-height: 1.3; }
+    .result-sub  { padding: 4px 18px 14px; font-size: 0.72rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+    .edit-row { padding: 0 18px 16px; display: flex; gap: 10px; }
     .edit-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.9rem; padding: 11px 14px; outline: none; transition: border-color 0.2s; }
     .edit-input:focus { border-color: var(--accent2); }
-    .save-btn { background: var(--accent); color: #0a0c10; border: none; border-radius: 10px; padding: 11px 20px; font-family: 'Space Mono', monospace; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+    .save-btn { background: var(--accent); color: #0a0c10; border: none; border-radius: 10px; padding: 11px 22px; font-family: 'Space Mono', monospace; font-size: 0.82rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
     .save-btn:hover { opacity: 0.85; }
 
-    .input-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
-    .input-label { font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
-    .input-row { display: flex; gap: 10px; }
-    .input-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.85rem; padding: 11px 14px; outline: none; transition: border-color 0.2s; }
-    .input-row input:focus { border-color: var(--accent2); }
-    .input-row input::placeholder { color: var(--muted); }
-    .btn { background: var(--accent2); color: #fff; border: none; border-radius: 10px; padding: 11px 18px; font-family: 'Space Mono', monospace; font-size: 0.8rem; cursor: pointer; font-weight: 700; transition: opacity 0.2s; }
-    .btn:hover { opacity: 0.85; }
+    /* MANUAL */
+    .manual-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .label { font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+    .manual-row { display: flex; gap: 10px; }
+    .manual-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.85rem; padding: 11px 14px; outline: none; transition: border-color 0.2s; }
+    .manual-row input:focus { border-color: var(--accent2); }
+    .manual-row input::placeholder { color: var(--muted); }
+    .send-btn { background: var(--accent2); color: #fff; border: none; border-radius: 10px; padding: 11px 18px; font-family: 'Space Mono', monospace; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+    .send-btn:hover { opacity: 0.85; }
 
+    /* LOG */
     .log-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-    .log-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .log-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
     .log-title { font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
     .log-count { font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--accent); }
-    .log-list { padding: 8px 0; max-height: 200px; overflow-y: auto; }
+    .log-list  { padding: 8px 0; max-height: 200px; overflow-y: auto; }
     .log-empty { padding: 24px 18px; text-align: center; color: var(--muted); font-size: 0.8rem; font-family: 'Space Mono', monospace; }
-    .log-item { padding: 10px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+    .log-item  { padding: 10px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
     .log-item:last-child { border-bottom: none; }
-    .log-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.75rem; }
+    .log-icon  { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.75rem; }
     .log-icon.ok  { background: rgba(0,229,160,0.12); color: var(--accent); }
     .log-icon.err { background: rgba(255,76,76,0.12);  color: var(--warn); }
     .log-code { flex: 1; font-family: 'Space Mono', monospace; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -104,8 +115,9 @@
     .log-list::-webkit-scrollbar { width: 4px; }
     .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); z-index: 100; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 10px 20px; font-size: 0.85rem; font-family: 'Space Mono', monospace; white-space: nowrap; transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); max-width: 90vw; text-align: center; }
-    .toast.show { transform: translateX(-50%) translateY(0); }
+    /* TOAST */
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-90px); z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 10px 22px; font-size: 0.82rem; font-family: 'Space Mono', monospace; white-space: nowrap; transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); max-width: 90vw; text-align: center; }
+    .toast.show    { transform: translateX(-50%) translateY(0); }
     .toast.success { border-color: var(--accent); color: var(--accent); }
     .toast.error   { border-color: var(--warn);   color: var(--warn); }
     .toast.info    { border-color: var(--accent2); color: var(--accent2); }
@@ -116,49 +128,66 @@
 
   <header>
     <div class="logo">Scann<span>App</span></div>
-    <div class="status-pill"><div class="status-dot"></div>OCR MODE</div>
+    <div class="pill"><div class="dot"></div>OCR MODE</div>
   </header>
 
-  <!-- Camera -->
-  <div class="camera-card">
-    <div class="card-header">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      Aim at code — tap Capture
+  <!-- Photo card -->
+  <div class="card">
+    <div class="card-head">Step 1 — Take a photo of the label</div>
+
+    <div class="preview-wrap">
+      <img id="preview" alt="preview" />
+      <div class="preview-placeholder" id="placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Tap TAKE PHOTO below
+      </div>
     </div>
-    <div class="video-wrap">
-      <video id="video" autoplay playsinline muted></video>
-      <canvas id="canvas"></canvas>
-      <div class="aim-guide"><span></span><div class="scan-line"></div></div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar" id="progressBar"></div>
     </div>
-    <div class="scan-status" id="scanStatus">Ready — point camera at the printed code</div>
-    <div class="capture-wrap">
-      <button class="capture-btn" id="captureBtn" onclick="capture()">CAPTURE &amp; READ TEXT</button>
+
+    <div class="status-bar" id="statusBar">Tap "Take Photo" to open your camera</div>
+
+    <div class="btn-row">
+      <button class="btn-photo btn-take" id="btnTake" onclick="document.getElementById('fileCamera').click()">
+        TAKE PHOTO
+      </button>
+      <button class="btn-photo btn-ocr" id="btnOcr" onclick="runOCR()" disabled>
+        READ TEXT
+      </button>
     </div>
   </div>
 
+  <!-- Hidden camera input — opens native camera on mobile -->
+  <input type="file" id="fileCamera" accept="image/*" capture="environment" onchange="photoSelected(event)" />
+
   <!-- Result -->
   <div class="result-card" id="resultCard">
-    <div class="result-header">OCR Result</div>
-    <div class="result-code" id="resultCode"></div>
-    <div class="result-hint">Edit below if any character is wrong, then tap SAVE</div>
+    <div class="result-head">✓ Text detected — confirm &amp; save</div>
+    <div class="result-text" id="resultText"></div>
+    <div class="result-sub">Edit if any character looks wrong</div>
     <div class="edit-row">
       <input class="edit-input" id="editInput" type="text" />
       <button class="save-btn" onclick="saveCode()">SAVE</button>
     </div>
   </div>
 
-  <!-- Manual -->
-  <div class="input-card">
-    <div class="input-label">Manual Entry</div>
-    <div class="input-row">
+  <!-- Manual entry -->
+  <div class="manual-card">
+    <div class="label">Manual Entry</div>
+    <div class="manual-row">
       <input type="text" id="manualInput" placeholder="Type code manually…" />
-      <button class="btn" onclick="submitManual()">SEND</button>
+      <button class="send-btn" onclick="submitManual()">SEND</button>
     </div>
   </div>
 
   <!-- Log -->
   <div class="log-card">
-    <div class="log-header">
+    <div class="log-head">
       <div class="log-title">Session Log</div>
       <div class="log-count" id="logCount">0 scans</div>
     </div>
@@ -170,108 +199,176 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
+<!-- Tesseract v4 — most stable version for mobile browsers -->
+<script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
 <script>
   // ── CONFIG ────────────────────────────────────────────────────────────────
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKCsS9xLd-AFr1K4nM7mJIdwGqe4mvRqsuoWrOnKlrdYDmWyLRU6YJqtlXJey_w0R8Xw/exec";
   // ─────────────────────────────────────────────────────────────────────────
 
-  let scanCount   = 0;
-  let isProcessing = false;
-  const video  = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
+  let currentImage = null;
+  let scanCount    = 0;
+  let worker       = null;
 
-  // Start rear camera
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-  }).then(stream => {
-    video.srcObject = stream;
-    setStatus('Ready — point camera at the printed code');
-  }).catch(err => {
-    setStatus('Camera error: ' + err.message, 'error');
-  });
-
-  // ── Capture & OCR ─────────────────────────────────────────────────────────
-  async function capture() {
-    if (isProcessing) return;
-    isProcessing = true;
-
-    const btn = document.getElementById('captureBtn');
-    btn.disabled = true;
-    btn.textContent = 'READING…';
-    setStatus('Capturing frame…', 'active');
-
-    // Snapshot current frame
-    canvas.width  = video.videoWidth  || 1280;
-    canvas.height = video.videoHeight || 720;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-
-    // Crop to the aim-guide region (86% wide, 36% tall, centred)
-    const cw = canvas.width, ch = canvas.height;
-    const cx = cw * 0.07,  cy = ch * 0.32;
-    const cW = cw * 0.86,  cH = ch * 0.36;
-
-    // Create a new canvas for the cropped + pre-processed region
-    const crop = document.createElement('canvas');
-    crop.width  = cW * 2;   // upscale 2× for better OCR accuracy
-    crop.height = cH * 2;
-    const cc = crop.getContext('2d');
-    cc.imageSmoothingEnabled = false;
-    cc.drawImage(canvas, cx, cy, cW, cH, 0, 0, crop.width, crop.height);
-
-    // Pre-process: greyscale → sharpen contrast → binarise
-    const imgData = cc.getImageData(0, 0, crop.width, crop.height);
-    const d = imgData.data;
-    for (let i = 0; i < d.length; i += 4) {
-      const g = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-      // Boost contrast: push towards black or white
-      const v = g > 145 ? 255 : 0;
-      d[i] = d[i+1] = d[i+2] = v;
+  // Pre-load Tesseract worker in the background so READ TEXT is instant
+  async function initWorker() {
+    try {
+      worker = await Tesseract.createWorker('eng', 1, {
+        workerPath   : 'https://unpkg.com/tesseract.js@4.1.1/dist/worker.min.js',
+        langPath     : 'https://tessdata.projectnaptha.com/4.0.0',
+        corePath     : 'https://unpkg.com/tesseract.js-core@4.0.4/tesseract-core.wasm.js',
+        logger       : m => {
+          if (m.status === 'recognizing text') {
+            const pct = Math.round((m.progress || 0) * 100);
+            setProgress(pct);
+            setStatus(`Reading text… ${pct}%`, 'active');
+          }
+        }
+      });
+      await worker.setParameters({
+        tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/',
+        tessedit_pageseg_mode  : Tesseract.PSM.SINGLE_LINE,
+      });
+      setStatus('Ready — tap "Take Photo"');
+    } catch(e) {
+      setStatus('OCR engine failed to load — try refreshing', 'bad');
+      console.error('Worker init error:', e);
     }
-    cc.putImageData(imgData, 0, 0);
+  }
+  initWorker();
 
-    setStatus('Reading text…', 'active');
+  // ── Photo selected from camera ────────────────────────────────────────────
+  function photoSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    currentImage = file;
+    const url = URL.createObjectURL(file);
+    const preview = document.getElementById('preview');
+    preview.src = url;
+    preview.style.display = 'block';
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('btnOcr').disabled = false;
+    setStatus('Photo loaded — tap "Read Text"', 'ok');
+    document.getElementById('resultCard').classList.remove('show');
+
+    // Reset file input so same file can be re-selected
+    event.target.value = '';
+  }
+
+  // ── Run OCR ───────────────────────────────────────────────────────────────
+  async function runOCR() {
+    if (!currentImage) { showToast('Take a photo first', 'info'); return; }
+    if (!worker)       { showToast('OCR engine still loading, please wait…', 'info'); return; }
+
+    const btnOcr  = document.getElementById('btnOcr');
+    const btnTake = document.getElementById('btnTake');
+    btnOcr.disabled  = true;
+    btnTake.disabled = true;
+    btnOcr.textContent = 'READING…';
+
+    showProgress(true);
+    setStatus('Starting OCR…', 'active');
 
     try {
-      const result = await Tesseract.recognize(crop, 'eng', {
-        tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/',
-        tessedit_pageseg_mode  : '7',   // single text line
-        tessedit_ocr_engine_mode: '1',  // LSTM engine
-      });
+      // Pre-process the image for better accuracy
+      const processed = await preprocessImage(currentImage);
 
-      // Strip whitespace and junk characters
-      const raw = result.data.text
-        .replace(/\s+/g, '')
-        .replace(/[^a-zA-Z0-9\-_\/]/g, '')
-        .trim();
+      const result = await worker.recognize(processed);
+      const lines  = result.data.lines || [];
 
-      if (!raw || raw.length < 3) {
-        setStatus('Nothing readable — hold closer & steady, try again', 'error');
+      // Find the longest clean line — most likely to be the code
+      let best = '';
+      for (const line of lines) {
+        const clean = line.text
+          .replace(/\s+/g, '')
+          .replace(/[^a-zA-Z0-9\-_\/]/g, '')
+          .trim();
+        if (clean.length > best.length) best = clean;
+      }
+
+      // Also try full text as fallback
+      if (!best) {
+        best = result.data.text
+          .replace(/\s+/g, '')
+          .replace(/[^a-zA-Z0-9\-_\/]/g, '')
+          .trim();
+      }
+
+      showProgress(false);
+
+      if (!best || best.length < 2) {
+        setStatus('Nothing readable — try better lighting or closer shot', 'bad');
         showToast('Could not read text — try again', 'error');
       } else {
-        setStatus('✓ Read: ' + raw, 'found');
-        showResult(raw);
-        if (navigator.vibrate) navigator.vibrate(80);
+        setStatus('✓ Found: ' + best, 'ok');
+        showResult(best);
+        if (navigator.vibrate) navigator.vibrate(100);
       }
 
     } catch (err) {
-      setStatus('OCR failed — try again', 'error');
-      console.error(err);
+      showProgress(false);
+      setStatus('Error: ' + err.message, 'bad');
+      console.error('OCR error:', err);
     }
 
-    btn.disabled = false;
-    btn.textContent = 'CAPTURE & READ TEXT';
-    isProcessing = false;
+    btnOcr.disabled  = false;
+    btnTake.disabled = false;
+    btnOcr.textContent = 'READ TEXT';
   }
 
-  // ── Show result with edit field ───────────────────────────────────────────
+  // ── Pre-process image: greyscale + binarise for better OCR ───────────────
+  function preprocessImage(file) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        // Limit to max 1200px wide (enough detail, not too heavy)
+        const maxW  = 1200;
+        const scale = Math.min(1, maxW / img.width);
+        const w     = Math.floor(img.width  * scale);
+        const h     = Math.floor(img.height * scale);
+
+        const c   = document.createElement('canvas');
+        c.width   = w;
+        c.height  = h;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // Greyscale + boost contrast
+        const id = ctx.getImageData(0, 0, w, h);
+        const d  = id.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+          // Stretch contrast: anything above 140 → white, below → black
+          const v = g > 140 ? 255 : 0;
+          d[i] = d[i+1] = d[i+2] = v;
+          d[i+3] = 255;
+        }
+        ctx.putImageData(id, 0, 0);
+
+        // Return as blob
+        c.toBlob(blob => resolve(blob), 'image/png');
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  // ── Show / hide progress bar ──────────────────────────────────────────────
+  function showProgress(show) {
+    document.getElementById('progressWrap').style.display = show ? 'block' : 'none';
+    if (!show) document.getElementById('progressBar').style.width = '0%';
+  }
+  function setProgress(pct) {
+    document.getElementById('progressBar').style.width = pct + '%';
+  }
+
+  // ── Show result ───────────────────────────────────────────────────────────
   function showResult(code) {
-    document.getElementById('resultCode').textContent = code;
+    document.getElementById('resultText').textContent = code;
     document.getElementById('editInput').value = code;
     const card = document.getElementById('resultCard');
     card.classList.add('show');
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
   }
 
   function saveCode() {
@@ -293,7 +390,7 @@
     if (e.key === 'Enter') submitManual();
   });
 
-  // ── Google Sheets ─────────────────────────────────────────────────────────
+  // ── Send to Google Sheets ─────────────────────────────────────────────────
   async function sendToSheet(code) {
     try {
       await fetch(SCRIPT_URL, {
@@ -306,14 +403,14 @@
       showToast('✓ Saved: ' + code, 'success');
     } catch (err) {
       addLog(code, false);
-      showToast('✗ Network error', 'error');
+      showToast('✗ Network error — not saved', 'error');
     }
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── UI Helpers ────────────────────────────────────────────────────────────
   function setStatus(msg, type = '') {
-    const el = document.getElementById('scanStatus');
-    el.className = 'scan-status ' + type;
+    const el = document.getElementById('statusBar');
+    el.className = 'status-bar ' + type;
     el.innerHTML = type === 'active'
       ? `<div class="spinner"></div>${msg}`
       : msg;
@@ -322,19 +419,19 @@
   let toastTimer;
   function showToast(msg, type = 'info') {
     const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = `toast ${type} show`;
+    t.textContent  = msg;
+    t.className    = `toast ${type} show`;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
   }
 
   function addLog(code, ok) {
-    const list = document.getElementById('logList');
+    const list  = document.getElementById('logList');
     const empty = list.querySelector('.log-empty');
     if (empty) empty.remove();
     scanCount++;
     document.getElementById('logCount').textContent = `${scanCount} scan${scanCount !== 1 ? 's' : ''}`;
-    const timeStr = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const item = document.createElement('div');
     item.className = 'log-item';
     item.innerHTML = `
