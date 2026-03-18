@@ -173,8 +173,50 @@
   // App ready on load
   window.addEventListener('load', () => setStatus('Ready — tap Take Photo'));
 
+  // ── Photo selected ────────────────────────────────────────────────────────
+  function photoSelected(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      currentImageB64 = ev.target.result.split(',')[1];
+      const preview = document.getElementById('preview');
+      preview.src = ev.target.result;
+      preview.style.display = 'block';
+      document.getElementById('placeholder').style.display = 'none';
+      document.getElementById('btnRead').disabled = false;
+      setStatus('Photo ready — tap Read Text', 'ok');
+      document.getElementById('resultCard').classList.remove('show');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  // ── Google Vision API OCR ─────────────────────────────────────────────────
+  async function readText() {
+    if (!currentImageB64) { showToast('Take a photo first', 'info'); return; }
+
+    const btnRead = document.getElementById('btnRead');
+    const btnTake = document.getElementById('btnTake');
+    btnRead.disabled = btnTake.disabled = true;
+    btnRead.textContent = 'READING…';
+    showProgress(true);
+    setStatus('Sending to Google Vision…', 'active');
+
+    try {
+      const response = await fetch(VISION_URL + '?key=' + VISION_KEY, {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({
+          requests: [{
+            image   : { content: currentImageB64 },
+            features: [{ type: 'TEXT_DETECTION', maxResults: 50 }]
+          }]
+        })
+      });
+
       const data = await response.json();
-      console.log('Vision API response:', JSON.stringify(data, null, 2));
+      console.log('Vision API full response:', JSON.stringify(data, null, 2));
 
       // Check for API errors
       if (data.error || (data.responses && data.responses[0] && data.responses[0].error)) {
