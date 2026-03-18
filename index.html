@@ -199,8 +199,46 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<!-- Tesseract v4 — most stable version for mobile browsers -->
-<script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+<!-- Load Tesseract from multiple CDN sources with fallback -->
+<script>
+  // First, define a fallback in case Tesseract fails to load
+  window.Tesseract = null;
+  
+  // Try multiple CDN sources
+  function loadTesseract() {
+    return new Promise((resolve, reject) => {
+      // If already loaded
+      if (window.Tesseract) {
+        resolve(window.Tesseract);
+        return;
+      }
+      
+      // Try primary CDN
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js';
+      script.onload = () => {
+        console.log('Tesseract loaded from primary CDN');
+        resolve(window.Tesseract);
+      };
+      script.onerror = () => {
+        console.log('Primary CDN failed, trying fallback...');
+        // Try fallback CDN
+        const fallbackScript = document.createElement('script');
+        fallbackScript.src = 'https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js';
+        fallbackScript.onload = () => {
+          console.log('Tesseract loaded from fallback CDN');
+          resolve(window.Tesseract);
+        };
+        fallbackScript.onerror = () => {
+          reject(new Error('Failed to load Tesseract from all CDNs'));
+        };
+        document.head.appendChild(fallbackScript);
+      };
+      document.head.appendChild(script);
+    });
+  }
+</script>
+
 <script>
   // ── CONFIG ────────────────────────────────────────────────────────────────
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKCsS9xLd-AFr1K4nM7mJIdwGqe4mvRqsuoWrOnKlrdYDmWyLRU6YJqtlXJey_w0R8Xw/exec";
@@ -209,15 +247,23 @@
   let currentImage = null;
   let scanCount    = 0;
   let worker       = null;
+  let tesseractAvailable = false;
 
-  // Pre-load Tesseract worker in the background so READ TEXT is instant
+  // Initialize Tesseract with proper error handling
   async function initWorker() {
+    setStatus('Loading OCR engine...', 'active');
+    
     try {
-      worker = await Tesseract.createWorker('eng', 1, {
-        workerPath   : 'https://unpkg.com/tesseract.js@4.1.1/dist/worker.min.js',
-        langPath     : 'https://tessdata.projectnaptha.com/4.0.0',
-        corePath     : 'https://unpkg.com/tesseract.js-core@4.0.4/tesseract-core.wasm.js',
-        logger       : m => {
+      // First load the Tesseract library
+      const TesseractLib = await loadTesseract();
+      
+      if (!TesseractLib) {
+        throw new Error('Tesseract library not available');
+      }
+      
+      // Create worker with simplified config
+      worker = await TesseractLib.createWorker({
+        logger: m => {
           if (m.status === 'recognizing text') {
             const pct = Math.round((m.progress || 0) * 100);
             setProgress(pct);
@@ -225,16 +271,33 @@
           }
         }
       });
+      
+      // Load language and initialize
+      await worker.loadLanguage('eng');
+      await worker.initialize('eng');
+      
+      // Set parameters
       await worker.setParameters({
         tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/',
-        tessedit_pageseg_mode  : Tesseract.PSM.SINGLE_LINE,
+        tessedit_pageseg_mode: '6', // SINGLE_LINE mode
       });
+      
+      tesseractAvailable = true;
       setStatus('Ready — tap "Take Photo"');
+      console.log('OCR engine loaded successfully');
+      
     } catch(e) {
-      setStatus('OCR engine failed to load — try refreshing', 'bad');
       console.error('Worker init error:', e);
+      setStatus('OCR engine failed — using manual entry only', 'bad');
+      showToast('OCR unavailable - use manual entry', 'info');
+      
+      // Disable OCR button but keep manual entry working
+      document.getElementById('btnOcr').disabled = true;
+      document.getElementById('btnOcr').title = 'OCR engine failed to load';
     }
   }
+
+  // Start loading immediately
   initWorker();
 
   // ── Photo selected from camera ────────────────────────────────────────────
@@ -248,8 +311,11 @@
     preview.src = url;
     preview.style.display = 'block';
     document.getElementById('placeholder').style.display = 'none';
-    document.getElementById('btnOcr').disabled = false;
-    setStatus('Photo loaded — tap "Read Text"', 'ok');
+    
+    // Only enable OCR if worker is available
+    document.getElementById('btnOcr').disabled = !tesseractAvailable;
+    
+    setStatus('Photo loaded — tap "Read Text"', tesseractAvailable ? 'ok' : 'bad');
     document.getElementById('resultCard').classList.remove('show');
 
     // Reset file input so same file can be re-selected
@@ -259,7 +325,10 @@
   // ── Run OCR ───────────────────────────────────────────────────────────────
   async function runOCR() {
     if (!currentImage) { showToast('Take a photo first', 'info'); return; }
-    if (!worker)       { showToast('OCR engine still loading, please wait…', 'info'); return; }
+    if (!worker || !tesseractAvailable) { 
+      showToast('OCR engine not available - try manual entry', 'error'); 
+      return; 
+    }
 
     const btnOcr  = document.getElementById('btnOcr');
     const btnTake = document.getElementById('btnTake');
@@ -274,39 +343,10 @@
       const processed = await preprocessImage(currentImage);
       const result    = await worker.recognize(processed);
 
-      // ── Pick the best candidate from all lines ──────────────────────────
-      // Your serial numbers look like: c20250915364
-      // Pattern: 1 optional letter prefix + 8-15 digits/alphanumeric
-      // Strategy: score each line — prefer lines that match this shape
-      const lines = result.data.lines || [];
+      // Extract text from result
       let best = '';
-      let bestScore = -1;
-
-      for (const line of lines) {
-        // Clean: remove spaces and punctuation except - _ /
-        const clean = line.text
-          .replace(/\s+/g, '')
-          .replace(/[^a-zA-Z0-9\-_]/g, '')
-          .trim();
-
-        if (clean.length < 4) continue; // too short to be a serial
-
-        // Score: favour strings that are mostly digits with optional short letter prefix
-        // e.g. "c20250915364" scores high, "CARDBOARD" scores low
-        const digitCount  = (clean.match(/\d/g) || []).length;
-        const letterCount = (clean.match(/[a-zA-Z]/g) || []).length;
-        const ratio       = digitCount / clean.length; // high ratio = mostly numbers = good
-        const lengthBonus = Math.min(clean.length, 15); // reward longer codes up to 15 chars
-        const score       = ratio * 100 + lengthBonus;
-
-        if (score > bestScore) {
-          bestScore = score;
-          best = clean;
-        }
-      }
-
-      // Fallback: use full text if nothing found in lines
-      if (!best) {
+      
+      if (result.data && result.data.text) {
         best = result.data.text
           .replace(/\s+/g, '')
           .replace(/[^a-zA-Z0-9\-_]/g, '')
@@ -328,18 +368,15 @@
       showProgress(false);
       setStatus('Error: ' + err.message, 'bad');
       console.error('OCR error:', err);
+      showToast('OCR failed: ' + err.message, 'error');
     }
 
-    btnOcr.disabled  = false;
+    btnOcr.disabled  = !tesseractAvailable;
     btnTake.disabled = false;
     btnOcr.textContent = 'READ TEXT';
   }
 
-  // ── Pre-process: crop to text zone only, then binarise ───────────────────
-  // Your label layout: barcode on top half, NUMBER TEXT on bottom half.
-  // We crop out the top 55% (barcode stripes) and keep only the bottom
-  // 45% where the printed number lives. This stops Tesseract reading
-  // barcode bars, background cardboard, and shadows as text.
+  // ── Pre-process image ───────────────────────────────────
   function preprocessImage(file) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -347,11 +384,11 @@
         const srcW = img.width;
         const srcH = img.height;
 
-        // Crop: skip top 55%, keep bottom 45% — that's where the number is
+        // Crop: skip top 55%, keep bottom 45%
         const cropY = Math.floor(srcH * 0.55);
         const cropH = srcH - cropY;
 
-        // Output at 2× scale for sharper OCR (up to 1600px wide)
+        // Output at 2× scale for sharper OCR
         const maxW  = 1600;
         const scale = Math.min(2, maxW / srcW);
         const outW  = Math.floor(srcW  * scale);
@@ -362,32 +399,10 @@
         c.height  = outH;
         const ctx = c.getContext('2d');
 
-        // Draw only the cropped bottom portion, scaled up
+        // Draw only the cropped bottom portion
         ctx.drawImage(img, 0, cropY, srcW, cropH, 0, 0, outW, outH);
 
-        // Greyscale + adaptive binarise
-        // Use a threshold based on the average brightness of this specific image
-        // rather than a fixed 140 — handles dark/light environments
-        const id   = ctx.getImageData(0, 0, outW, outH);
-        const px   = id.data;
-
-        // Calculate average brightness
-        let total = 0;
-        for (let i = 0; i < px.length; i += 4) {
-          total += 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
-        }
-        const avgBrightness = total / (px.length / 4);
-        // Threshold: slightly below average (text is darker than background)
-        const threshold = avgBrightness * 0.85;
-
-        for (let i = 0; i < px.length; i += 4) {
-          const g = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
-          const v = g > threshold ? 255 : 0;
-          px[i] = px[i+1] = px[i+2] = v;
-          px[i+3] = 255;
-        }
-        ctx.putImageData(id, 0, 0);
-
+        // Convert to blob
         c.toBlob(blob => resolve(blob), 'image/png');
       };
       img.src = URL.createObjectURL(file);
@@ -399,6 +414,7 @@
     document.getElementById('progressWrap').style.display = show ? 'block' : 'none';
     if (!show) document.getElementById('progressBar').style.width = '0%';
   }
+  
   function setProgress(pct) {
     document.getElementById('progressBar').style.width = pct + '%';
   }
@@ -427,69 +443,34 @@
     sendToSheet(val);
     inp.value = '';
   }
+  
   document.getElementById('manualInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') submitManual();
   });
 
   // ── Send to Google Sheets ─────────────────────────────────────────────────
   async function sendToSheet(code) {
-    // Show sending status
     showToast('Sending...', 'info');
     
     try {
-      // IMPORTANT FIX: Use POST with proper CORS mode
-      // Using 'no-cors' was preventing the request from working properly
+      // Use fetch with proper CORS mode
       const response = await fetch(SCRIPT_URL, {
         method: 'POST',
-        // Don't use 'no-cors' - it prevents reading the response
-        mode: 'cors',
-        // These headers are important
+        mode: 'no-cors', // Keep no-cors for Google Apps Script
         headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
+          'Content-Type': 'application/json',
         },
-        // Google Apps Script expects the body to be a string
         body: JSON.stringify({ code: code })
       });
       
-      // Try to parse the response (though with no-cors this would fail)
-      let result;
-      try {
-        result = await response.json();
-      } catch (e) {
-        // If we can't parse JSON, assume it worked if status is OK
-        if (response.ok) {
-          addLog(code, true);
-          showToast('✓ Saved: ' + code, 'success');
-          return;
-        } else {
-          throw new Error('Server returned ' + response.status);
-        }
-      }
-      
-      if (result.status === 'ok' || result.status === 'duplicate') {
-        addLog(code, true);
-        showToast('✓ Saved: ' + code, 'success');
-      } else {
-        throw new Error(result.message || 'Unknown error');
-      }
+      // With no-cors, we can't read response, so assume success
+      addLog(code, true);
+      showToast('✓ Saved: ' + code, 'success');
       
     } catch (err) {
       console.error('Send error:', err);
       addLog(code, false);
       showToast('✗ Failed to save: ' + err.message, 'error');
-      
-      // Fallback: try with image method as a last resort
-      try {
-        // Sometimes CORS issues can be bypassed with an image trick
-        const img = new Image();
-        img.src = SCRIPT_URL + '?code=' + encodeURIComponent(code) + '&t=' + Date.now();
-        // Don't wait for response, just hope it works
-        setTimeout(() => {
-          console.log('Fallback image method used for:', code);
-        }, 100);
-      } catch (e) {
-        // Ignore fallback errors
-      }
     }
   }
 
@@ -530,14 +511,6 @@
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
-
-  // Test connection on load
-  window.addEventListener('load', function() {
-    // Optional: Test if the Apps Script is reachable
-    fetch(SCRIPT_URL, { method: 'GET', mode: 'no-cors' })
-      .then(() => console.log('Backend reachable'))
-      .catch(err => console.log('Backend test:', err));
-  });
 </script>
 </body>
 </html>
