@@ -4,337 +4,111 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Scann App</title>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #0a0c10;
-      --surface: #12151c;
-      --border: #1e2330;
-      --accent: #00e5a0;
-      --accent2: #0077ff;
-      --warn: #ff4c4c;
-      --text: #e8eaf0;
-      --muted: #5a6275;
-      --radius: 16px;
+      --bg: #0a0c10; --surface: #12151c; --border: #1e2330;
+      --accent: #00e5a0; --accent2: #0077ff; --warn: #ff4c4c;
+      --text: #e8eaf0; --muted: #5a6275; --radius: 16px;
     }
-
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      overflow-x: hidden;
-    }
-
-    /* Subtle grid background */
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
     body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(var(--border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 40px 40px;
-      opacity: 0.4;
-      pointer-events: none;
-      z-index: 0;
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px; opacity: 0.4; pointer-events: none; z-index: 0;
     }
+    .app { position: relative; z-index: 1; max-width: 420px; margin: 0 auto; min-height: 100vh; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 20px; }
 
-    .app {
-      position: relative;
-      z-index: 1;
-      max-width: 420px;
-      margin: 0 auto;
-      min-height: 100vh;
-      padding: 24px 16px 40px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    /* HEADER */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 0;
-    }
-    .logo {
-      font-family: 'Space Mono', monospace;
-      font-size: 1.1rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: var(--accent);
-      text-transform: uppercase;
-    }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+    .logo { font-family: 'Space Mono', monospace; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); text-transform: uppercase; }
     .logo span { color: var(--text); }
-    .status-pill {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.7rem;
-      font-family: 'Space Mono', monospace;
-      color: var(--muted);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 100px;
-      padding: 5px 12px;
-    }
-    .status-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 6px var(--accent);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
+    .status-pill { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 5px 12px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-    /* SCANNER CARD */
-    .scanner-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      position: relative;
-    }
-    .scanner-card-header {
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.75rem;
-      font-family: 'Space Mono', monospace;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-    .scanner-card-header svg { color: var(--accent2); flex-shrink: 0; }
+    .camera-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .card-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; font-size: 0.75rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
 
-    #reader {
-      width: 100% !important;
-    }
-    /* Override html5-qrcode default styles */
-    #reader video {
-      width: 100% !important;
-      border-radius: 0 !important;
-    }
-    #reader__scan_region {
-      background: #000;
-    }
-    #reader__dashboard {
-      padding: 12px 16px !important;
-      background: var(--surface) !important;
-      border-top: 1px solid var(--border) !important;
-    }
-    #reader__dashboard_section_swaplink,
-    #reader__camera_permission_button,
-    #reader__filescan_input { display: none !important; }
-    #reader__dashboard_section_csr > span { display: none !important; }
+    .video-wrap { position: relative; background: #000; width: 100%; aspect-ratio: 16/9; }
+    #video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    #canvas { display: none; }
 
-    /* Corner scan guides */
-    .scan-overlay {
-      position: absolute;
-      top: 52px; left: 0; right: 0;
-      pointer-events: none;
-      z-index: 5;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .aim-guide {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 86%; height: 36%; pointer-events: none;
     }
-    .scan-guide {
-      width: 300px;
-      height: 100px;
-      position: relative;
+    .aim-guide::before, .aim-guide::after,
+    .aim-guide span::before, .aim-guide span::after {
+      content: ''; position: absolute; width: 24px; height: 24px;
+      border-color: var(--accent); border-style: solid;
     }
-    .scan-guide::before,
-    .scan-guide::after,
-    .scan-guide span::before,
-    .scan-guide span::after {
-      content: '';
-      position: absolute;
-      width: 28px;
-      height: 28px;
-      border-color: var(--accent);
-      border-style: solid;
-    }
-    .scan-guide::before  { top: 0; left: 0;  border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
-    .scan-guide::after   { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
-    .scan-guide span::before { bottom: 0; left: 0;  border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
-    .scan-guide span::after  { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+    .aim-guide::before  { top:0; left:0;   border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+    .aim-guide::after   { top:0; right:0;  border-width:3px 3px 0 0; border-radius:0 4px 0 0; }
+    .aim-guide span::before { bottom:0; left:0;  border-width:0 0 3px 3px; border-radius:0 0 0 4px; }
+    .aim-guide span::after  { bottom:0; right:0; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
     .scan-line {
-      position: absolute;
-      top: 0; left: 10%; right: 10%;
-      height: 2px;
+      position: absolute; left: 5%; right: 5%; height: 2px;
       background: linear-gradient(90deg, transparent, var(--accent), transparent);
-      animation: scanline 2.4s ease-in-out infinite;
-      border-radius: 2px;
+      animation: scanline 2s ease-in-out infinite;
     }
-    @keyframes scanline {
-      0%   { top: 10%; opacity: 0; }
-      10%  { opacity: 1; }
-      90%  { opacity: 1; }
-      100% { top: 90%; opacity: 0; }
-    }
+    @keyframes scanline { 0%{top:5%;opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{top:95%;opacity:0} }
 
-    /* FEEDBACK TOAST */
-    .toast {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%) translateY(-80px);
-      z-index: 100;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 100px;
-      padding: 10px 20px;
-      font-size: 0.85rem;
-      font-family: 'Space Mono', monospace;
-      white-space: nowrap;
-      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
-      max-width: 90vw;
-      text-align: center;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .toast.show { transform: translateX(-50%) translateY(0); }
-    .toast.success { border-color: var(--accent); color: var(--accent); }
-    .toast.error   { border-color: var(--warn);  color: var(--warn); }
-    .toast.info    { border-color: var(--accent2); color: var(--accent2); }
+    .scan-status { padding: 12px 18px; font-size: 0.75rem; font-family: 'Space Mono', monospace; color: var(--muted); display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--border); min-height: 46px; }
+    .scan-status.active { color: var(--accent2); }
+    .scan-status.found  { color: var(--accent); }
+    .scan-status.error  { color: var(--warn); }
+    .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to{transform:rotate(360deg)} }
 
-    /* MANUAL INPUT */
-    .input-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px;
-    }
-    .input-label {
-      font-size: 0.7rem;
-      font-family: 'Space Mono', monospace;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 10px;
-    }
-    .input-row {
-      display: flex;
-      gap: 10px;
-    }
-    .input-row input {
-      flex: 1;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      font-family: 'Space Mono', monospace;
-      font-size: 0.85rem;
-      padding: 11px 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
+    .capture-wrap { padding: 14px 18px; border-top: 1px solid var(--border); }
+    .capture-btn { width: 100%; padding: 14px; background: var(--accent2); color: #fff; border: none; border-radius: 10px; font-family: 'Space Mono', monospace; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.06em; cursor: pointer; transition: opacity 0.2s, transform 0.1s; }
+    .capture-btn:hover  { opacity: 0.85; }
+    .capture-btn:active { transform: scale(0.98); }
+    .capture-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .result-card { background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); overflow: hidden; display: none; }
+    .result-card.show { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
+    .result-header { padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; }
+    .result-code { padding: 18px 18px 8px; font-family: 'Space Mono', monospace; font-size: 1.4rem; font-weight: 700; color: var(--accent); word-break: break-all; }
+    .result-hint { padding: 0 18px 14px; font-size: 0.75rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+    .edit-row { padding: 0 18px 18px; display: flex; gap: 10px; }
+    .edit-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.9rem; padding: 11px 14px; outline: none; transition: border-color 0.2s; }
+    .edit-input:focus { border-color: var(--accent2); }
+    .save-btn { background: var(--accent); color: #0a0c10; border: none; border-radius: 10px; padding: 11px 20px; font-family: 'Space Mono', monospace; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+    .save-btn:hover { opacity: 0.85; }
+
+    .input-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .input-label { font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+    .input-row { display: flex; gap: 10px; }
+    .input-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.85rem; padding: 11px 14px; outline: none; transition: border-color 0.2s; }
     .input-row input:focus { border-color: var(--accent2); }
     .input-row input::placeholder { color: var(--muted); }
-    .btn {
-      background: var(--accent2);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 11px 18px;
-      font-family: 'Space Mono', monospace;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-    }
-    .btn:hover  { opacity: 0.85; }
-    .btn:active { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn { background: var(--accent2); color: #fff; border: none; border-radius: 10px; padding: 11px 18px; font-family: 'Space Mono', monospace; font-size: 0.8rem; cursor: pointer; font-weight: 700; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.85; }
 
-    /* LOG */
-    .log-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      flex: 1;
-    }
-    .log-header {
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .log-title {
-      font-size: 0.7rem;
-      font-family: 'Space Mono', monospace;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-    .log-count {
-      font-size: 0.7rem;
-      font-family: 'Space Mono', monospace;
-      color: var(--accent);
-    }
-    .log-list {
-      padding: 8px 0;
-      max-height: 220px;
-      overflow-y: auto;
-    }
-    .log-empty {
-      padding: 28px 18px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.8rem;
-      font-family: 'Space Mono', monospace;
-    }
-    .log-item {
-      padding: 10px 18px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border-bottom: 1px solid var(--border);
-      animation: fadeIn 0.3s ease;
-    }
+    .log-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .log-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .log-title { font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+    .log-count { font-size: 0.7rem; font-family: 'Space Mono', monospace; color: var(--accent); }
+    .log-list { padding: 8px 0; max-height: 200px; overflow-y: auto; }
+    .log-empty { padding: 24px 18px; text-align: center; color: var(--muted); font-size: 0.8rem; font-family: 'Space Mono', monospace; }
+    .log-item { padding: 10px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
     .log-item:last-child { border-bottom: none; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; } }
-    .log-icon {
-      width: 28px; height: 28px;
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      font-size: 0.75rem;
-    }
+    .log-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.75rem; }
     .log-icon.ok  { background: rgba(0,229,160,0.12); color: var(--accent); }
     .log-icon.err { background: rgba(255,76,76,0.12);  color: var(--warn); }
-    .log-code {
-      flex: 1;
-      font-family: 'Space Mono', monospace;
-      font-size: 0.8rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .log-time {
-      font-family: 'Space Mono', monospace;
-      font-size: 0.65rem;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    /* Scrollbar */
+    .log-code { flex: 1; font-family: 'Space Mono', monospace; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .log-time { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--muted); white-space: nowrap; }
     .log-list::-webkit-scrollbar { width: 4px; }
-    .log-list::-webkit-scrollbar-track { background: transparent; }
     .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); z-index: 100; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 10px 20px; font-size: 0.85rem; font-family: 'Space Mono', monospace; white-space: nowrap; transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); max-width: 90vw; text-align: center; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--accent); color: var(--accent); }
+    .toast.error   { border-color: var(--warn);   color: var(--warn); }
+    .toast.info    { border-color: var(--accent2); color: var(--accent2); }
   </style>
 </head>
 <body>
@@ -342,35 +116,43 @@
 
   <header>
     <div class="logo">Scann<span>App</span></div>
-    <div class="status-pill">
-      <div class="status-dot"></div>
-      LIVE
-    </div>
+    <div class="status-pill"><div class="status-dot"></div>OCR MODE</div>
   </header>
 
-  <!-- Scanner -->
-  <div class="scanner-card">
-    <div class="scanner-card-header">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Camera Scanner
+  <!-- Camera -->
+  <div class="camera-card">
+    <div class="card-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Aim at code — tap Capture
     </div>
-    <div style="position:relative;">
-      <div id="reader"></div>
-      <div class="scan-overlay">
-        <div class="scan-guide">
-          <span></span>
-          <div class="scan-line"></div>
-        </div>
-      </div>
+    <div class="video-wrap">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+      <div class="aim-guide"><span></span><div class="scan-line"></div></div>
+    </div>
+    <div class="scan-status" id="scanStatus">Ready — point camera at the printed code</div>
+    <div class="capture-wrap">
+      <button class="capture-btn" id="captureBtn" onclick="capture()">CAPTURE &amp; READ TEXT</button>
     </div>
   </div>
 
-  <!-- Manual Input -->
+  <!-- Result -->
+  <div class="result-card" id="resultCard">
+    <div class="result-header">OCR Result</div>
+    <div class="result-code" id="resultCode"></div>
+    <div class="result-hint">Edit below if any character is wrong, then tap SAVE</div>
+    <div class="edit-row">
+      <input class="edit-input" id="editInput" type="text" />
+      <button class="save-btn" onclick="saveCode()">SAVE</button>
+    </div>
+  </div>
+
+  <!-- Manual -->
   <div class="input-card">
     <div class="input-label">Manual Entry</div>
     <div class="input-row">
-      <input type="text" id="manualInput" placeholder="Enter code manually…" />
-      <button class="btn" id="manualBtn" onclick="submitManual()">SEND</button>
+      <input type="text" id="manualInput" placeholder="Type code manually…" />
+      <button class="btn" onclick="submitManual()">SEND</button>
     </div>
   </div>
 
@@ -381,47 +163,178 @@
       <div class="log-count" id="logCount">0 scans</div>
     </div>
     <div class="log-list" id="logList">
-      <div class="log-empty">No scans yet — point camera at a QR or barcode</div>
+      <div class="log-empty">No scans yet</div>
     </div>
   </div>
 
 </div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-  // ── CONFIG ──────────────────────────────────────────────────────────────────
+  // ── CONFIG ────────────────────────────────────────────────────────────────
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwKCsS9xLd-AFr1K4nM7mJIdwGqe4mvRqsuoWrOnKlrdYDmWyLRU6YJqtlXJey_w0R8Xw/exec";
-  const COOLDOWN_MS = 3000; // prevent duplicate rapid scans
-  // ────────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
 
-  let lastCode = null;
-  let lastTime = 0;
-  let scanCount = 0;
+  let scanCount   = 0;
+  let isProcessing = false;
+  const video  = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
 
-  // TOAST
+  // Start rear camera
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+  }).then(stream => {
+    video.srcObject = stream;
+    setStatus('Ready — point camera at the printed code');
+  }).catch(err => {
+    setStatus('Camera error: ' + err.message, 'error');
+  });
+
+  // ── Capture & OCR ─────────────────────────────────────────────────────────
+  async function capture() {
+    if (isProcessing) return;
+    isProcessing = true;
+
+    const btn = document.getElementById('captureBtn');
+    btn.disabled = true;
+    btn.textContent = 'READING…';
+    setStatus('Capturing frame…', 'active');
+
+    // Snapshot current frame
+    canvas.width  = video.videoWidth  || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+
+    // Crop to the aim-guide region (86% wide, 36% tall, centred)
+    const cw = canvas.width, ch = canvas.height;
+    const cx = cw * 0.07,  cy = ch * 0.32;
+    const cW = cw * 0.86,  cH = ch * 0.36;
+
+    // Create a new canvas for the cropped + pre-processed region
+    const crop = document.createElement('canvas');
+    crop.width  = cW * 2;   // upscale 2× for better OCR accuracy
+    crop.height = cH * 2;
+    const cc = crop.getContext('2d');
+    cc.imageSmoothingEnabled = false;
+    cc.drawImage(canvas, cx, cy, cW, cH, 0, 0, crop.width, crop.height);
+
+    // Pre-process: greyscale → sharpen contrast → binarise
+    const imgData = cc.getImageData(0, 0, crop.width, crop.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const g = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+      // Boost contrast: push towards black or white
+      const v = g > 145 ? 255 : 0;
+      d[i] = d[i+1] = d[i+2] = v;
+    }
+    cc.putImageData(imgData, 0, 0);
+
+    setStatus('Reading text…', 'active');
+
+    try {
+      const result = await Tesseract.recognize(crop, 'eng', {
+        tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/',
+        tessedit_pageseg_mode  : '7',   // single text line
+        tessedit_ocr_engine_mode: '1',  // LSTM engine
+      });
+
+      // Strip whitespace and junk characters
+      const raw = result.data.text
+        .replace(/\s+/g, '')
+        .replace(/[^a-zA-Z0-9\-_\/]/g, '')
+        .trim();
+
+      if (!raw || raw.length < 3) {
+        setStatus('Nothing readable — hold closer & steady, try again', 'error');
+        showToast('Could not read text — try again', 'error');
+      } else {
+        setStatus('✓ Read: ' + raw, 'found');
+        showResult(raw);
+        if (navigator.vibrate) navigator.vibrate(80);
+      }
+
+    } catch (err) {
+      setStatus('OCR failed — try again', 'error');
+      console.error(err);
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'CAPTURE & READ TEXT';
+    isProcessing = false;
+  }
+
+  // ── Show result with edit field ───────────────────────────────────────────
+  function showResult(code) {
+    document.getElementById('resultCode').textContent = code;
+    document.getElementById('editInput').value = code;
+    const card = document.getElementById('resultCard');
+    card.classList.add('show');
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function saveCode() {
+    const val = document.getElementById('editInput').value.trim();
+    if (!val) { showToast('Code is empty', 'info'); return; }
+    sendToSheet(val);
+    document.getElementById('resultCard').classList.remove('show');
+  }
+
+  // ── Manual entry ──────────────────────────────────────────────────────────
+  function submitManual() {
+    const inp = document.getElementById('manualInput');
+    const val = inp.value.trim();
+    if (!val) { showToast('Please enter a code', 'info'); return; }
+    sendToSheet(val);
+    inp.value = '';
+  }
+  document.getElementById('manualInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitManual();
+  });
+
+  // ── Google Sheets ─────────────────────────────────────────────────────────
+  async function sendToSheet(code) {
+    try {
+      await fetch(SCRIPT_URL, {
+        method : 'POST',
+        mode   : 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ code }),
+      });
+      addLog(code, true);
+      showToast('✓ Saved: ' + code, 'success');
+    } catch (err) {
+      addLog(code, false);
+      showToast('✗ Network error', 'error');
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function setStatus(msg, type = '') {
+    const el = document.getElementById('scanStatus');
+    el.className = 'scan-status ' + type;
+    el.innerHTML = type === 'active'
+      ? `<div class="spinner"></div>${msg}`
+      : msg;
+  }
+
   let toastTimer;
   function showToast(msg, type = 'info') {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.className = `toast ${type} show`;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
   }
 
-  // LOG
   function addLog(code, ok) {
     const list = document.getElementById('logList');
     const empty = list.querySelector('.log-empty');
     if (empty) empty.remove();
-
     scanCount++;
     document.getElementById('logCount').textContent = `${scanCount} scan${scanCount !== 1 ? 's' : ''}`;
-
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
+    const timeStr = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
     const item = document.createElement('div');
     item.className = 'log-item';
     item.innerHTML = `
@@ -434,84 +347,6 @@
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
-
-  // SEND TO GOOGLE SHEETS
-  // Uses no-cors mode to avoid CORS preflight blocking on GitHub Pages.
-  // The request succeeds; we just can't read the response body (that's fine).
-  async function sendToSheet(code) {
-    try {
-      await fetch(SCRIPT_URL, {
-        method: "POST",
-        mode: "no-cors",          // ← key fix for GitHub Pages
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
-      addLog(code, true);
-      showToast("✓ Saved: " + code, "success");
-    } catch (err) {
-      console.error(err);
-      addLog(code, false);
-      showToast("✗ Network error — not saved", "error");
-    }
-  }
-
-  // QR SCAN CALLBACK
-  function onScanSuccess(decodedText) {
-    const now = Date.now();
-    if (decodedText === lastCode && now - lastTime < COOLDOWN_MS) return;
-    lastCode = decodedText;
-    lastTime = now;
-
-    // brief haptic if supported
-    if (navigator.vibrate) navigator.vibrate(80);
-
-    sendToSheet(decodedText);
-  }
-
-  // START SCANNER
-  // Wide qrbox for barcodes (Code 128 barcodes are wide, not square).
-  // All major formats enabled so c20250915364-style codes are detected.
-  const html5QrCode = new Html5Qrcode("reader", {
-    formatsToSupport: [
-      Html5QrcodeSupportedFormats.CODE_128,
-      Html5QrcodeSupportedFormats.CODE_39,
-      Html5QrcodeSupportedFormats.CODE_93,
-      Html5QrcodeSupportedFormats.EAN_13,
-      Html5QrcodeSupportedFormats.EAN_8,
-      Html5QrcodeSupportedFormats.UPC_A,
-      Html5QrcodeSupportedFormats.UPC_E,
-      Html5QrcodeSupportedFormats.ITF,
-      Html5QrcodeSupportedFormats.QR_CODE,
-      Html5QrcodeSupportedFormats.DATA_MATRIX,
-    ],
-    verbose: false,
-  });
-
-  html5QrCode.start(
-    { facingMode: "environment" },
-    {
-      fps        : 15,                           // faster scan attempts
-      qrbox      : { width: 300, height: 100 },  // wide & short = barcode shape
-      aspectRatio: 1.7,                          // landscape view fits barcodes
-    },
-    onScanSuccess
-  ).catch(err => {
-    showToast("Camera error: " + err, "error");
-    console.error(err);
-  });
-
-  // MANUAL SUBMIT
-  function submitManual() {
-    const inp = document.getElementById('manualInput');
-    const val = inp.value.trim();
-    if (!val) { showToast("Please enter a code first", "info"); return; }
-    sendToSheet(val);
-    inp.value = '';
-  }
-
-  document.getElementById('manualInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') submitManual();
-  });
 </script>
 </body>
 </html>
