@@ -1,34 +1,496 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Scanner</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Scann App</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <h2>Scan Meter</h2>
-  <div id="reader" style="width:300px;"></div>
-
-  <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbx3x8d_yDQSiI0Po56ZeQ5Ocm0ao2ZCMTZk8Qd15k3_73WtaC8wock_HtkeEpy4Q9ZgRg/exec";
-
-    function onScanSuccess(decodedText) {
-      fetch(scriptURL, {
-        method: "POST",
-        body: JSON.stringify({ code: decodedText }),
-      });
-
-      alert("Saved: " + decodedText);
+    :root {
+      --bg: #0a0c10;
+      --surface: #12151c;
+      --border: #1e2330;
+      --accent: #00e5a0;
+      --accent2: #0077ff;
+      --warn: #ff4c4c;
+      --text: #e8eaf0;
+      --muted: #5a6275;
+      --radius: 16px;
     }
 
-    const html5QrCode = new Html5Qrcode("reader");
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+    }
 
-    html5QrCode.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: 250 },
-      onScanSuccess
-    );
-  </script>
+    /* Subtle grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
 
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 420px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 24px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+    .logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .logo span { color: var(--text); }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 5px 12px;
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* SCANNER CARD */
+    .scanner-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+    }
+    .scanner-card-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.75rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .scanner-card-header svg { color: var(--accent2); flex-shrink: 0; }
+
+    #reader {
+      width: 100% !important;
+    }
+    /* Override html5-qrcode default styles */
+    #reader video {
+      width: 100% !important;
+      border-radius: 0 !important;
+    }
+    #reader__scan_region {
+      background: #000;
+    }
+    #reader__dashboard {
+      padding: 12px 16px !important;
+      background: var(--surface) !important;
+      border-top: 1px solid var(--border) !important;
+    }
+    #reader__dashboard_section_swaplink,
+    #reader__camera_permission_button,
+    #reader__filescan_input { display: none !important; }
+    #reader__dashboard_section_csr > span { display: none !important; }
+
+    /* Corner scan guides */
+    .scan-overlay {
+      position: absolute;
+      top: 52px; left: 0; right: 0;
+      pointer-events: none;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .scan-guide {
+      width: 200px;
+      height: 200px;
+      position: relative;
+    }
+    .scan-guide::before,
+    .scan-guide::after,
+    .scan-guide span::before,
+    .scan-guide span::after {
+      content: '';
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-color: var(--accent);
+      border-style: solid;
+    }
+    .scan-guide::before  { top: 0; left: 0;  border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+    .scan-guide::after   { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+    .scan-guide span::before { bottom: 0; left: 0;  border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+    .scan-guide span::after  { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+    .scan-line {
+      position: absolute;
+      top: 0; left: 10%; right: 10%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scanline 2.4s ease-in-out infinite;
+      border-radius: 2px;
+    }
+    @keyframes scanline {
+      0%   { top: 10%; opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { top: 90%; opacity: 0; }
+    }
+
+    /* FEEDBACK TOAST */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      z-index: 100;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 10px 20px;
+      font-size: 0.85rem;
+      font-family: 'Space Mono', monospace;
+      white-space: nowrap;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      max-width: 90vw;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--accent); color: var(--accent); }
+    .toast.error   { border-color: var(--warn);  color: var(--warn); }
+    .toast.info    { border-color: var(--accent2); color: var(--accent2); }
+
+    /* MANUAL INPUT */
+    .input-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .input-label {
+      font-size: 0.7rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 10px;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+    .input-row input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-row input:focus { border-color: var(--accent2); }
+    .input-row input::placeholder { color: var(--muted); }
+    .btn {
+      background: var(--accent2);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 18px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .btn:hover  { opacity: 0.85; }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* LOG */
+    .log-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      flex: 1;
+    }
+    .log-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .log-title {
+      font-size: 0.7rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .log-count {
+      font-size: 0.7rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--accent);
+    }
+    .log-list {
+      padding: 8px 0;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .log-empty {
+      padding: 28px 18px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-family: 'Space Mono', monospace;
+    }
+    .log-item {
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      animation: fadeIn 0.3s ease;
+    }
+    .log-item:last-child { border-bottom: none; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; } }
+    .log-icon {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.75rem;
+    }
+    .log-icon.ok  { background: rgba(0,229,160,0.12); color: var(--accent); }
+    .log-icon.err { background: rgba(255,76,76,0.12);  color: var(--warn); }
+    .log-code {
+      flex: 1;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .log-time {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* Scrollbar */
+    .log-list::-webkit-scrollbar { width: 4px; }
+    .log-list::-webkit-scrollbar-track { background: transparent; }
+    .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">Scann<span>App</span></div>
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      LIVE
+    </div>
+  </header>
+
+  <!-- Scanner -->
+  <div class="scanner-card">
+    <div class="scanner-card-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Camera Scanner
+    </div>
+    <div style="position:relative;">
+      <div id="reader"></div>
+      <div class="scan-overlay">
+        <div class="scan-guide">
+          <span></span>
+          <div class="scan-line"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual Input -->
+  <div class="input-card">
+    <div class="input-label">Manual Entry</div>
+    <div class="input-row">
+      <input type="text" id="manualInput" placeholder="Enter code manually…" />
+      <button class="btn" id="manualBtn" onclick="submitManual()">SEND</button>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="log-card">
+    <div class="log-header">
+      <div class="log-title">Session Log</div>
+      <div class="log-count" id="logCount">0 scans</div>
+    </div>
+    <div class="log-list" id="logList">
+      <div class="log-empty">No scans yet — point camera at a QR or barcode</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── CONFIG ──────────────────────────────────────────────────────────────────
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3x8d_yDQSiI0Po56ZeQ5Ocm0ao2ZCMTZk8Qd15k3_73WtaC8wock_HtkeEpy4Q9ZgRg/exec";
+  const COOLDOWN_MS = 3000; // prevent duplicate rapid scans
+  // ────────────────────────────────────────────────────────────────────────────
+
+  let lastCode = null;
+  let lastTime = 0;
+  let scanCount = 0;
+
+  // TOAST
+  let toastTimer;
+  function showToast(msg, type = 'info') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // LOG
+  function addLog(code, ok) {
+    const list = document.getElementById('logList');
+    const empty = list.querySelector('.log-empty');
+    if (empty) empty.remove();
+
+    scanCount++;
+    document.getElementById('logCount').textContent = `${scanCount} scan${scanCount !== 1 ? 's' : ''}`;
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const item = document.createElement('div');
+    item.className = 'log-item';
+    item.innerHTML = `
+      <div class="log-icon ${ok ? 'ok' : 'err'}">${ok ? '✓' : '✗'}</div>
+      <div class="log-code">${escHtml(code)}</div>
+      <div class="log-time">${timeStr}</div>`;
+    list.prepend(item);
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // SEND TO GOOGLE SHEETS
+  // Uses no-cors mode to avoid CORS preflight blocking on GitHub Pages.
+  // The request succeeds; we just can't read the response body (that's fine).
+  async function sendToSheet(code) {
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",          // ← key fix for GitHub Pages
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      addLog(code, true);
+      showToast("✓ Saved: " + code, "success");
+    } catch (err) {
+      console.error(err);
+      addLog(code, false);
+      showToast("✗ Network error — not saved", "error");
+    }
+  }
+
+  // QR SCAN CALLBACK
+  function onScanSuccess(decodedText) {
+    const now = Date.now();
+    if (decodedText === lastCode && now - lastTime < COOLDOWN_MS) return;
+    lastCode = decodedText;
+    lastTime = now;
+
+    // brief haptic if supported
+    if (navigator.vibrate) navigator.vibrate(80);
+
+    sendToSheet(decodedText);
+  }
+
+  // START SCANNER
+  const html5QrCode = new Html5Qrcode("reader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+    onScanSuccess
+  ).catch(err => {
+    showToast("Camera error: " + err, "error");
+    console.error(err);
+  });
+
+  // MANUAL SUBMIT
+  function submitManual() {
+    const inp = document.getElementById('manualInput');
+    const val = inp.value.trim();
+    if (!val) { showToast("Please enter a code first", "info"); return; }
+    sendToSheet(val);
+    inp.value = '';
+  }
+
+  document.getElementById('manualInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitManual();
+  });
+</script>
 </body>
 </html>
