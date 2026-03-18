@@ -10,7 +10,7 @@
   <div id="reader" style="width:300px;"></div>
 
   <script>
-    const scriptURL = "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbx3x8d_yDQSiI0Po56ZeQ5Ocm0ao2ZCMTZk8Qd15k3_73WtaC8wock_HtkeEpy4Q9ZgRg/exec";
 
     function onScanSuccess(decodedText) {
       fetch(scriptURL, {
@@ -25,10 +25,7 @@
 
     html5QrCode.start(
       { facingMode: "environment" },
-      {
-        fps: 10,
-        qrbox: 250
-      },
+      { fps: 10, qrbox: 250 },
       onScanSuccess
     );
   </script>
