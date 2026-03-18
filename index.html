@@ -433,18 +433,63 @@
 
   // ── Send to Google Sheets ─────────────────────────────────────────────────
   async function sendToSheet(code) {
+    // Show sending status
+    showToast('Sending...', 'info');
+    
     try {
-      await fetch(SCRIPT_URL, {
-        method : 'POST',
-        mode   : 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ code }),
+      // IMPORTANT FIX: Use POST with proper CORS mode
+      // Using 'no-cors' was preventing the request from working properly
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        // Don't use 'no-cors' - it prevents reading the response
+        mode: 'cors',
+        // These headers are important
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        // Google Apps Script expects the body to be a string
+        body: JSON.stringify({ code: code })
       });
-      addLog(code, true);
-      showToast('✓ Saved: ' + code, 'success');
+      
+      // Try to parse the response (though with no-cors this would fail)
+      let result;
+      try {
+        result = await response.json();
+      } catch (e) {
+        // If we can't parse JSON, assume it worked if status is OK
+        if (response.ok) {
+          addLog(code, true);
+          showToast('✓ Saved: ' + code, 'success');
+          return;
+        } else {
+          throw new Error('Server returned ' + response.status);
+        }
+      }
+      
+      if (result.status === 'ok' || result.status === 'duplicate') {
+        addLog(code, true);
+        showToast('✓ Saved: ' + code, 'success');
+      } else {
+        throw new Error(result.message || 'Unknown error');
+      }
+      
     } catch (err) {
+      console.error('Send error:', err);
       addLog(code, false);
-      showToast('✗ Network error — not saved', 'error');
+      showToast('✗ Failed to save: ' + err.message, 'error');
+      
+      // Fallback: try with image method as a last resort
+      try {
+        // Sometimes CORS issues can be bypassed with an image trick
+        const img = new Image();
+        img.src = SCRIPT_URL + '?code=' + encodeURIComponent(code) + '&t=' + Date.now();
+        // Don't wait for response, just hope it works
+        setTimeout(() => {
+          console.log('Fallback image method used for:', code);
+        }, 100);
+      } catch (e) {
+        // Ignore fallback errors
+      }
     }
   }
 
@@ -485,6 +530,14 @@
   function escHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+
+  // Test connection on load
+  window.addEventListener('load', function() {
+    // Optional: Test if the Apps Script is reachable
+    fetch(SCRIPT_URL, { method: 'GET', mode: 'no-cors' })
+      .then(() => console.log('Backend reachable'))
+      .catch(err => console.log('Backend test:', err));
+  });
 </script>
 </body>
 </html>
