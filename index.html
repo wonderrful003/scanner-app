@@ -271,34 +271,52 @@
     setStatus('Starting OCR…', 'active');
 
     try {
-      // Pre-process the image for better accuracy
       const processed = await preprocessImage(currentImage);
+      const result    = await worker.recognize(processed);
 
-      const result = await worker.recognize(processed);
-      const lines  = result.data.lines || [];
-
-      // Find the longest clean line — most likely to be the code
+      // ── Pick the best candidate from all lines ──────────────────────────
+      // Your serial numbers look like: c20250915364
+      // Pattern: 1 optional letter prefix + 8-15 digits/alphanumeric
+      // Strategy: score each line — prefer lines that match this shape
+      const lines = result.data.lines || [];
       let best = '';
+      let bestScore = -1;
+
       for (const line of lines) {
+        // Clean: remove spaces and punctuation except - _ /
         const clean = line.text
           .replace(/\s+/g, '')
-          .replace(/[^a-zA-Z0-9\-_\/]/g, '')
+          .replace(/[^a-zA-Z0-9\-_]/g, '')
           .trim();
-        if (clean.length > best.length) best = clean;
+
+        if (clean.length < 4) continue; // too short to be a serial
+
+        // Score: favour strings that are mostly digits with optional short letter prefix
+        // e.g. "c20250915364" scores high, "CARDBOARD" scores low
+        const digitCount  = (clean.match(/\d/g) || []).length;
+        const letterCount = (clean.match(/[a-zA-Z]/g) || []).length;
+        const ratio       = digitCount / clean.length; // high ratio = mostly numbers = good
+        const lengthBonus = Math.min(clean.length, 15); // reward longer codes up to 15 chars
+        const score       = ratio * 100 + lengthBonus;
+
+        if (score > bestScore) {
+          bestScore = score;
+          best = clean;
+        }
       }
 
-      // Also try full text as fallback
+      // Fallback: use full text if nothing found in lines
       if (!best) {
         best = result.data.text
           .replace(/\s+/g, '')
-          .replace(/[^a-zA-Z0-9\-_\/]/g, '')
+          .replace(/[^a-zA-Z0-9\-_]/g, '')
           .trim();
       }
 
       showProgress(false);
 
-      if (!best || best.length < 2) {
-        setStatus('Nothing readable — try better lighting or closer shot', 'bad');
+      if (!best || best.length < 3) {
+        setStatus('Nothing readable — try closer with good lighting', 'bad');
         showToast('Could not read text — try again', 'error');
       } else {
         setStatus('✓ Found: ' + best, 'ok');
@@ -317,36 +335,59 @@
     btnOcr.textContent = 'READ TEXT';
   }
 
-  // ── Pre-process image: greyscale + binarise for better OCR ───────────────
+  // ── Pre-process: crop to text zone only, then binarise ───────────────────
+  // Your label layout: barcode on top half, NUMBER TEXT on bottom half.
+  // We crop out the top 55% (barcode stripes) and keep only the bottom
+  // 45% where the printed number lives. This stops Tesseract reading
+  // barcode bars, background cardboard, and shadows as text.
   function preprocessImage(file) {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        // Limit to max 1200px wide (enough detail, not too heavy)
-        const maxW  = 1200;
-        const scale = Math.min(1, maxW / img.width);
-        const w     = Math.floor(img.width  * scale);
-        const h     = Math.floor(img.height * scale);
+        const srcW = img.width;
+        const srcH = img.height;
+
+        // Crop: skip top 55%, keep bottom 45% — that's where the number is
+        const cropY = Math.floor(srcH * 0.55);
+        const cropH = srcH - cropY;
+
+        // Output at 2× scale for sharper OCR (up to 1600px wide)
+        const maxW  = 1600;
+        const scale = Math.min(2, maxW / srcW);
+        const outW  = Math.floor(srcW  * scale);
+        const outH  = Math.floor(cropH * scale);
 
         const c   = document.createElement('canvas');
-        c.width   = w;
-        c.height  = h;
+        c.width   = outW;
+        c.height  = outH;
         const ctx = c.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
 
-        // Greyscale + boost contrast
-        const id = ctx.getImageData(0, 0, w, h);
-        const d  = id.data;
-        for (let i = 0; i < d.length; i += 4) {
-          const g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
-          // Stretch contrast: anything above 140 → white, below → black
-          const v = g > 140 ? 255 : 0;
-          d[i] = d[i+1] = d[i+2] = v;
-          d[i+3] = 255;
+        // Draw only the cropped bottom portion, scaled up
+        ctx.drawImage(img, 0, cropY, srcW, cropH, 0, 0, outW, outH);
+
+        // Greyscale + adaptive binarise
+        // Use a threshold based on the average brightness of this specific image
+        // rather than a fixed 140 — handles dark/light environments
+        const id   = ctx.getImageData(0, 0, outW, outH);
+        const px   = id.data;
+
+        // Calculate average brightness
+        let total = 0;
+        for (let i = 0; i < px.length; i += 4) {
+          total += 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
+        }
+        const avgBrightness = total / (px.length / 4);
+        // Threshold: slightly below average (text is darker than background)
+        const threshold = avgBrightness * 0.85;
+
+        for (let i = 0; i < px.length; i += 4) {
+          const g = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
+          const v = g > threshold ? 255 : 0;
+          px[i] = px[i+1] = px[i+2] = v;
+          px[i+3] = 255;
         }
         ctx.putImageData(id, 0, 0);
 
-        // Return as blob
         c.toBlob(blob => resolve(blob), 'image/png');
       };
       img.src = URL.createObjectURL(file);
