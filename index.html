@@ -149,8 +149,8 @@
       justify-content: center;
     }
     .scan-guide {
-      width: 200px;
-      height: 200px;
+      width: 300px;
+      height: 100px;
       position: relative;
     }
     .scan-guide::before,
@@ -469,10 +469,31 @@
   }
 
   // START SCANNER
-  const html5QrCode = new Html5Qrcode("reader");
+  // Wide qrbox for barcodes (Code 128 barcodes are wide, not square).
+  // All major formats enabled so c20250915364-style codes are detected.
+  const html5QrCode = new Html5Qrcode("reader", {
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.CODE_93,
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E,
+      Html5QrcodeSupportedFormats.ITF,
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.DATA_MATRIX,
+    ],
+    verbose: false,
+  });
+
   html5QrCode.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+    {
+      fps        : 15,                           // faster scan attempts
+      qrbox      : { width: 300, height: 100 },  // wide & short = barcode shape
+      aspectRatio: 1.7,                          // landscape view fits barcodes
+    },
     onScanSuccess
   ).catch(err => {
     showToast("Camera error: " + err, "error");
